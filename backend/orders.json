@@ -1,0 +1,56 @@
+[
+  {
+    "name": "Иван",
+    "phone": "+7777777777",
+    "address": "",
+    "items": [
+      {
+        "id": 2,
+        "title": "LEGO Technic Bugatti",
+        "price": 45990,
+        "quantity": 3
+      },
+      {
+        "id": 1,
+        "title": "LEGO Star Wars X-Wing",
+        "price": 12990,
+        "quantity": 1
+      },
+      {
+        "id": 3,
+        "title": "LEGO City Police Station",
+        "price": 8990,
+        "quantity": 2
+      }
+    ],
+    "total": 168940
+  },
+  {
+    "name": "ttgrthetrhe",
+    "phone": "tgwtrtge5tgtw",
+    "address": "",
+    "items": [
+      {
+        "id": 1,
+        "title": "LEGO Star Wars X-Wing",
+        "price": 12990,
+        "quantity": 1
+      },
+      {
+        "id": 2,
+        "title": "LEGO Technic Bugatti",
+        "price": 45990,
+        "quantity": 1
+      },
+      {
+        "id": 3,
+        "title": "LEGO City Police Station",
+        "price": 8990,
+        "quantity": 1
+      }
+    ],
+    "total": 67970,
+    "id": 1770501680697,
+    "status": "confirmed"
+  }
+]
