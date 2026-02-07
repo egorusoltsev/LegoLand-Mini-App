@@ -110,7 +110,7 @@ export default {
     },
     async fetchProducts() {
       try {
-        const res = await fetch('http://localhost:8000/products')
+        const res = await fetch('https://legoland-miniapp.onrender.com/products')
         this.products = await res.json()
       } catch (e) {
         console.error('Ошибка загрузки товаров', e)
@@ -140,7 +140,7 @@ export default {
         }
 
       try {
-        const res = await fetch('http://localhost:8000/order', {
+        const res = await fetch('https://legoland-miniapp.onrender.com/order', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

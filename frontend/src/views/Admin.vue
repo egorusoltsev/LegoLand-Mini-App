@@ -48,7 +48,7 @@ export default {
 
   async mounted() {
     try {
-      const res = await fetch('http://localhost:8000/orders', {
+      const res = await fetch('https://legoland-miniapp.onrender.com/orders', {
                           headers: {
                             'X-Admin-Key': this.adminKey
                           }
@@ -62,7 +62,7 @@ export default {
   methods: {
     async setStatus(orderId, newStatus) {
         try {
-            await fetch(`http://localhost:8000/orders/${orderId}/status`, {
+            await fetch(`https://legoland-miniapp.onrender.com/orders/${orderId}/status`, {
                 method: 'PATCH',
                 headers: {
                 'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ export default {
             })
 
             // обновляем список заказов
-            const res = await fetch('http://localhost:8000/orders')
+            const res = await fetch('https://legoland-miniapp.onrender.com/orders')
             this.orders = await res.json()
             } catch (e) {
             console.error('Ошибка смены статуса', e)
