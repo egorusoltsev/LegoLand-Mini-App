@@ -1,6 +1,25 @@
 <template>
   <div class="admin">
     <h2>Админка — заказы</h2>
+    <hr />
+
+    <h3>Товары</h3>
+
+    <div class="add-product">
+    <input v-model="newTitle" class="input" placeholder="Название" />
+    <input v-model.number="newPrice" class="input" type="number" placeholder="Цена" />
+    <input v-model="newImage" class="input" placeholder="image (например xwing.jpg)" />
+    <button @click="addProduct">Добавить</button>
+    </div>
+
+    <div v-if="products.length === 0">Товаров пока нет</div>
+
+    <div v-for="p in products" :key="p.id" class="product-row">
+    <span>#{{ p.id }} — {{ p.title }} — {{ p.price }} ₽ — {{ p.image }}</span>
+    <button @click="deleteProduct(p.id)">Удалить</button>
+    </div>
+
+    <hr />
 
     <div v-if="orders.length === 0">
       Заказов пока нет
@@ -42,40 +61,109 @@ export default {
   data() {
     return {
       orders: [],
-      adminKey: '12345'
+      products: [],
+      adminKey: '12345',
+      loading: false,
+      error: '',
+      
+      newTitle: '',
+      newPrice: 0,
+      newImage: ''
     }
   },
 
   async mounted() {
     try {
-      const API_URL = import.meta.env.VITE_API_URL
-      fetch(`${API_URL}/orders`)
-      this.orders = await res.json()
+        const API_URL = import.meta.env.VITE_API_URL
+
+        // загружаем заказы
+        const ordersRes = await fetch(`${API_URL}/orders`)
+        this.orders = await ordersRes.json()
+
+        // загружаем товары
+        this.loadProducts()
+
     } catch (e) {
-      console.error('Ошибка загрузки заказов', e)
+        console.error('Ошибка загрузки админки', e)
     }
   },
 
   methods: {
     async setStatus(orderId, newStatus) {
         try {
-            fetch(`${API_URL}/orders/${orderId}/status`, {
-                method: 'PATCH',
-                headers: {
+            const API_URL = import.meta.env.VITE_API_URL
+
+            await fetch(`${API_URL}/orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
                 'Content-Type': 'application/json',
                 'X-Admin-Key': this.adminKey
-                },
-                body: JSON.stringify({ status: newStatus })
+            },
+            body: JSON.stringify({ status: newStatus })
             })
 
             // обновляем список заказов
-            const API_URL = import.meta.env.VITE_API_URL
-            fetch(`${API_URL}/orders`)
+            const res = await fetch(`${API_URL}/orders`)
             this.orders = await res.json()
-            } catch (e) {
+
+        } catch (e) {
             console.error('Ошибка смены статуса', e)
-            }
         }
+      },
+    async loadProducts() {
+        try {
+            const API_URL = import.meta.env.VITE_API_URL
+            const res = await fetch(`${API_URL}/products`)
+            this.products = await res.json()
+        } catch (e) {
+            console.error('Ошибка загрузки товаров', e)
+        }
+      },
+    async addProduct() {
+        if (!this.newTitle.trim()) return alert('Введите название')
+        if (!this.newImage.trim()) return alert('Введите image')
+
+        try {
+            const API_URL = import.meta.env.VITE_API_URL
+            await fetch(`${API_URL}/admin/products`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Key': this.adminKey
+            },
+            body: JSON.stringify({
+                title: this.newTitle,
+                price: this.newPrice,
+                image: this.newImage
+            })
+            })
+
+            this.newTitle = ''
+            this.newPrice = 0
+            this.newImage = ''
+
+            this.loadProducts()
+        } catch (e) {
+            console.error('Ошибка добавления товара', e)
+        }
+      },
+    async deleteProduct(id) {
+        if (!confirm('Удалить товар?')) return
+
+        try {
+            const API_URL = import.meta.env.VITE_API_URL
+            await fetch(`${API_URL}/admin/products/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Admin-Key': this.adminKey
+            }
+            })
+
+            this.loadProducts()
+        } catch (e) {
+            console.error('Ошибка удаления товара', e)
+        }
+      }
     }
 }
 </script>
@@ -100,5 +188,27 @@ export default {
 .status-buttons button {
   padding: 6px 10px;
   cursor: pointer;
+}
+
+.add-product {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.product-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px;
+  border: 1px solid #eee;
+  margin-bottom: 6px;
 }
 </style>

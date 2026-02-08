@@ -10,6 +10,18 @@ from fastapi import Depends
 from fastapi import Header, HTTPException
 
 app = FastAPI()
+PRODUCTS_FILE ="products.json"
+def load_products():
+    if not os.path.exists(PRODUCTS_FILE):
+        return []
+    try:
+        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+def save_products(products_list):
+    with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(products_list, f, ensure_ascii=False, indent=2)
 
 # CORS (обязательно для Vue)
 app.add_middleware(
@@ -22,27 +34,7 @@ app.add_middleware(
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
-products = [
-    {
-        "id": 1,
-        "title": "LEGO Star Wars X-Wing",
-        "price": 12990,
-        "image": "http://localhost:8000/images/Picture1forassets.jpg"
-    },
-    {
-        "id": 2,
-        "title": "LEGO Technic Bugatti",
-        "price": 45990,
-        "image": "http://localhost:8000/images/Picture2forassets.jpg"
-    },
-    {
-        "id": 3,
-        "title": "LEGO City Police Station",
-        "price": 8990,
-        "image": "http://localhost:8000/images/Picture3forassets.jpg"
-    }
-]
-
+products = load_products()
 
 class OrderItem(BaseModel):
     id: int
@@ -80,6 +72,43 @@ orders = load_orders()
 @app.get("/products")
 def get_products():
     return products
+
+@app.post("/admin/products")
+def add_product(product: dict, _=Depends(check_admin_key)):
+    # 1) генерируем новый id: берём максимальный существующий + 1
+    new_id = 1
+    if len(products) > 0:
+        new_id = max(p.get("id", 0) for p in products) + 1
+
+    # 2) создаём новый товар
+    new_product = {
+        "id": new_id,
+        "title": product.get("title", ""),
+        "price": product.get("price", 0),
+        "image": product.get("image", "")
+    }
+
+    # 3) простая проверка (валидация)
+    if not new_product["title"] or not new_product["image"]:
+        return {"status": "error", "message": "title и image обязательны"}
+
+    products.append(new_product)
+    save_products(products)
+
+    return {"status": "ok", "product": new_product}
+
+@app.delete("/admin/products/{product_id}")
+def delete_product(product_id: int, _=Depends(check_admin_key)):
+    global products
+    before = len(products)
+
+    products = [p for p in products if p.get("id") != product_id]
+
+    if len(products) == before:
+        return {"status": "error", "message": "Товар не найден"}
+
+    save_products(products)
+    return {"status": "ok", "message": "Товар удалён"}
 
 @app.post("/order")
 def create_order(order: dict):
