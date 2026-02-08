@@ -48,11 +48,8 @@ export default {
 
   async mounted() {
     try {
-      const res = await fetch('https://legoland-miniapp.onrender.com/orders', {
-                          headers: {
-                            'X-Admin-Key': this.adminKey
-                          }
-                        })
+      const API_URL = import.meta.env.VITE_API_URL
+      fetch(`${API_URL}/orders`)
       this.orders = await res.json()
     } catch (e) {
       console.error('Ошибка загрузки заказов', e)
@@ -62,7 +59,7 @@ export default {
   methods: {
     async setStatus(orderId, newStatus) {
         try {
-            await fetch(`https://legoland-miniapp.onrender.com/orders/${orderId}/status`, {
+            fetch(`${API_URL}/orders/${orderId}/status`, {
                 method: 'PATCH',
                 headers: {
                 'Content-Type': 'application/json',
@@ -72,7 +69,8 @@ export default {
             })
 
             // обновляем список заказов
-            const res = await fetch('https://legoland-miniapp.onrender.com/orders')
+            const API_URL = import.meta.env.VITE_API_URL
+            fetch(`${API_URL}/orders`)
             this.orders = await res.json()
             } catch (e) {
             console.error('Ошибка смены статуса', e)

@@ -110,7 +110,8 @@ export default {
     },
     async fetchProducts() {
       try {
-        const res = await fetch('https://legoland-miniapp.onrender.com/products')
+        const API_URL = import.meta.env.VITE_API_URL
+        const res = await fetch(`${API_URL}/products`)
         this.products = await res.json()
       } catch (e) {
         console.error('Ошибка загрузки товаров', e)
@@ -140,7 +141,8 @@ export default {
         }
 
       try {
-        const res = await fetch('https://legoland-miniapp.onrender.com/order', {
+        const API_URL = import.meta.env.VITE_API_URL
+        const res = await fetch(`${API_URL}/order`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
