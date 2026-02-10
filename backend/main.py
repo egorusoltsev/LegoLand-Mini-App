@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import uuid
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +9,7 @@ from pydantic import BaseModel
 from typing import List
 from fastapi import Depends
 from fastapi import Header, HTTPException
+from fastapi import UploadFile, File
 
 app = FastAPI()
 PRODUCTS_FILE ="products.json"
@@ -122,6 +124,31 @@ def create_order(order: dict):
     save_orders(orders)
 
     return {"status": "ok", "order_id": new_order["id"]}
+
+@app.post("/admin/upload")
+async def upload_image(
+    file: UploadFile = File(...),
+    x_admin_key: str = Header(None)
+):
+    if x_admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    os.makedirs("images", exist_ok=True)
+
+    # берём расширение
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise HTTPException(status_code=400, detail="Only images allowed")
+
+    # безопасное уникальное имя файла
+    filename = f"{uuid.uuid4().hex}{ext}"
+    path = os.path.join("images", filename)
+
+    content = await file.read()
+    with open(path, "wb") as f:
+        f.write(content)
+
+    return {"status": "ok", "filename": filename, "url": f"/images/{filename}"}
 
 @app.get("/orders")
 def get_orders(_=Depends(check_admin_key)):

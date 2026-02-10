@@ -10,6 +10,8 @@
     <input v-model.number="newPrice" class="input" type="number" placeholder="Цена" />
     <input v-model="newImage" class="input" placeholder="image (например xwing.jpg)" />
     <button @click="addProduct">Добавить</button>
+    <input type="file" @change="onFileChange" />
+    <button @click="uploadImage">Загрузить фото</button>
     </div>
 
     <div v-if="products.length === 0">Товаров пока нет</div>
@@ -68,7 +70,8 @@ export default {
       
       newTitle: '',
       newPrice: 0,
-      newImage: ''
+      newImage: '',
+      selectedFile: null
     }
   },
 
@@ -117,6 +120,40 @@ export default {
             this.products = await res.json()
         } catch (e) {
             console.error('Ошибка загрузки товаров', e)
+        }
+      },
+      onFileChange(e) {
+        this.selectedFile = e.target.files[0] || null
+        },
+
+      async uploadImage() {
+        if (!this.selectedFile) return alert('Выбери файл')
+
+        try {
+            const API_URL = import.meta.env.VITE_API_URL
+            const formData = new FormData()
+            formData.append('file', this.selectedFile)
+
+            const res = await fetch(`${API_URL}/admin/upload`, {
+            method: 'POST',
+            headers: {
+                'X-Admin-Key': this.adminKey
+            },
+            body: formData
+            })
+
+            const data = await res.json()
+            if (!res.ok) {
+            console.error(data)
+            return alert('Ошибка загрузки файла')
+            }
+
+            // 👇 ВАЖНО: сюда подставляем filename, а не полный URL
+            this.newImage = data.filename
+            alert('Фото загружено, теперь можно добавить товар')
+
+        } catch (e) {
+            console.error('Ошибка upload', e)
         }
       },
     async addProduct() {

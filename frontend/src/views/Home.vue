@@ -11,7 +11,7 @@
           :key="product.id"
           :title="product.title"
           :price="product.price"
-          :image="product.image"
+          :image="getImageUrl(product.image)"
           @buy="addToCart(product)"
         />
       </div>
@@ -117,7 +117,17 @@ export default {
         console.error('Ошибка загрузки товаров', e)
       }
     },
-    async sendOrder() {
+
+    getImageUrl(image) {
+      const API_URL = import.meta.env.VITE_API_URL
+        // если уже полный URL — возвращаем как есть
+      if (image && (image.startsWith('http://') || image.startsWith('https://'))) {
+            return image
+      }
+        // иначе считаем, что это имя файла
+      return `${API_URL}/images/${image}`
+    },
+            async sendOrder() {
           if (!this.customerName.trim()) {
           alert('Введите имя')
         return
