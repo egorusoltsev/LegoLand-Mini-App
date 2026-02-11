@@ -143,16 +143,16 @@ def delete_product(product_id: int, _=Depends(check_admin_key)):
 def create_order(order: dict):
     items_text = "\n".join([
     f"• {item['title']} x{item['quantity']} = {item['price'] * item['quantity']} ₽"
-    for item in order_data["items"]
+    for item in order["items"]
     ])
 
     msg = (
         "🧱 <b>Новый заказ!</b>\n\n"
-        f"👤 Имя: <b>{order_data.get('name')}</b>\n"
-        f"📞 Телефон: <b>{order_data.get('phone')}</b>\n"
-        f"🏠 Адрес: <b>{order_data.get('address', '-')}</b>\n\n"
+        f"👤 Имя: <b>{order.get('name')}</b>\n"
+        f"📞 Телефон: <b>{order.get('phone')}</b>\n"
+        f"🏠 Адрес: <b>{order.get('address', '-')}</b>\n\n"
         f"📦 Товары:\n{items_text}\n\n"
-        f"💰 Итого: <b>{order_data.get('total')} ₽</b>"
+        f"💰 Итого: <b>{order.get('total')} ₽</b>"
     )
 
     send_telegram_message(msg)
