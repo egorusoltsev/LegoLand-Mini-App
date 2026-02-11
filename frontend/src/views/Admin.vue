@@ -1,6 +1,19 @@
 <template>
   <div class="admin">
-    <h2>Админка — заказы</h2>
+    <h2>Админка</h2>
+
+    <div v-if="!adminKey" class="login-box">
+        <p>Введите ключ админа:</p>
+        <input v-model="adminKeyInput" placeholder="Admin key" />
+        <button @click="login">Войти</button>
+    </div>
+
+    <div v-else>
+        <button class="logout" @click="logout">Выйти</button>
+
+        <!-- ДАЛЬШЕ ОСТАВЛЯЕШЬ ТВОЙ ТЕКУЩИЙ КОД АДМИНКИ: заказы/товары/кнопки -->
+        <!-- то есть твой v-for orders/products, формы добавления и т.д. -->
+    </div>
     <hr />
 
     <h3>Товары</h3>
@@ -64,146 +77,208 @@ export default {
     return {
       orders: [],
       products: [],
-      adminKey: '12345',
+
+      adminKey: '',          // ключ хранится тут
+      adminKeyInput: '',     // поле ввода ключа
+
       loading: false,
       error: '',
-      
+
       newTitle: '',
       newPrice: 0,
       newImage: '',
+
       selectedFile: null
     }
   },
 
-  async mounted() {
-    try {
-        const API_URL = import.meta.env.VITE_API_URL
-
-        // загружаем заказы
-        const ordersRes = await fetch(`${API_URL}/orders`)
-        this.orders = await ordersRes.json()
-
-        // загружаем товары
-        this.loadProducts()
-
-    } catch (e) {
-        console.error('Ошибка загрузки админки', e)
+  mounted() {
+    const savedKey = localStorage.getItem('ADMIN_KEY')
+    if (savedKey) {
+      this.adminKey = savedKey
+      this.loadAll()
     }
   },
 
   methods: {
+    login() {
+      const key = this.adminKeyInput.trim()
+      if (!key) return alert('Введите ключ')
+
+      this.adminKey = key
+      localStorage.setItem('ADMIN_KEY', key)
+      this.adminKeyInput = ''
+
+      this.loadAll()
+    },
+
+    logout() {
+      this.adminKey = ''
+      localStorage.removeItem('ADMIN_KEY')
+      this.orders = []
+      this.products = []
+    },
+
+    async loadAll() {
+      await this.fetchOrders()
+      await this.loadProducts()
+    },
+
+    async fetchOrders() {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL
+        const res = await fetch(`${API_URL}/orders`, {
+          headers: {
+            'X-Admin-Key': this.adminKey
+          }
+        })
+
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('fetchOrders error:', res.status, text)
+          return
+        }
+
+        this.orders = await res.json()
+      } catch (e) {
+        console.error('Ошибка загрузки заказов', e)
+      }
+    },
+
     async setStatus(orderId, newStatus) {
-        try {
-            const API_URL = import.meta.env.VITE_API_URL
+      try {
+        const API_URL = import.meta.env.VITE_API_URL
 
-            await fetch(`${API_URL}/orders/${orderId}/status`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Admin-Key': this.adminKey
-            },
-            body: JSON.stringify({ status: newStatus })
-            })
+        const patchRes = await fetch(`${API_URL}/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Key': this.adminKey
+          },
+          body: JSON.stringify({ status: newStatus })
+        })
 
-            // обновляем список заказов
-            const res = await fetch(`${API_URL}/orders`)
-            this.orders = await res.json()
-
-        } catch (e) {
-            console.error('Ошибка смены статуса', e)
+        if (!patchRes.ok) {
+          const text = await patchRes.text()
+          console.error('setStatus error:', patchRes.status, text)
+          return
         }
-      },
+
+        // обновляем список заказов правильно (с ключом)
+        await this.fetchOrders()
+      } catch (e) {
+        console.error('Ошибка смены статуса', e)
+      }
+    },
+
     async loadProducts() {
-        try {
-            const API_URL = import.meta.env.VITE_API_URL
-            const res = await fetch(`${API_URL}/products`)
-            this.products = await res.json()
-        } catch (e) {
-            console.error('Ошибка загрузки товаров', e)
+      try {
+        const API_URL = import.meta.env.VITE_API_URL
+        const res = await fetch(`${API_URL}/products`)
+        this.products = await res.json()
+      } catch (e) {
+        console.error('Ошибка загрузки товаров', e)
+      }
+    },
+
+    onFileChange(e) {
+      this.selectedFile = e.target.files?.[0] || null
+    },
+
+    async uploadImage() {
+      if (!this.selectedFile) return alert('Выбери файл')
+
+      try {
+        const API_URL = import.meta.env.VITE_API_URL
+        const formData = new FormData()
+        formData.append('file', this.selectedFile)
+
+        const res = await fetch(`${API_URL}/admin/upload`, {
+          method: 'POST',
+          headers: {
+            'X-Admin-Key': this.adminKey
+          },
+          body: formData
+        })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          console.error(data)
+          return alert('Ошибка загрузки файла')
         }
-      },
-      onFileChange(e) {
-        this.selectedFile = e.target.files[0] || null
-        },
 
-      async uploadImage() {
-        if (!this.selectedFile) return alert('Выбери файл')
+        // сохраняем filename
+        this.newImage = data.filename
+        alert('Фото загружено, теперь можно добавить товар')
+      } catch (e) {
+        console.error('Ошибка upload', e)
+      }
+    },
 
-        try {
-            const API_URL = import.meta.env.VITE_API_URL
-            const formData = new FormData()
-            formData.append('file', this.selectedFile)
-
-            const res = await fetch(`${API_URL}/admin/upload`, {
-            method: 'POST',
-            headers: {
-                'X-Admin-Key': this.adminKey
-            },
-            body: formData
-            })
-
-            const data = await res.json()
-            if (!res.ok) {
-            console.error(data)
-            return alert('Ошибка загрузки файла')
-            }
-
-            // 👇 ВАЖНО: сюда подставляем filename, а не полный URL
-            this.newImage = data.filename
-            alert('Фото загружено, теперь можно добавить товар')
-
-        } catch (e) {
-            console.error('Ошибка upload', e)
-        }
-      },
     async addProduct() {
-        if (!this.newTitle.trim()) return alert('Введите название')
-        if (!this.newImage.trim()) return alert('Введите image')
+      if (!this.newTitle.trim()) return alert('Введите название')
+      if (!this.newImage.trim()) return alert('Сначала загрузите фото (upload)')
 
-        try {
-            const API_URL = import.meta.env.VITE_API_URL
-            await fetch(`${API_URL}/admin/products`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Admin-Key': this.adminKey
-            },
-            body: JSON.stringify({
-                title: this.newTitle,
-                price: this.newPrice,
-                image: this.newImage
-            })
-            })
+      try {
+        const API_URL = import.meta.env.VITE_API_URL
+        const res = await fetch(`${API_URL}/admin/products`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Key': this.adminKey
+          },
+          body: JSON.stringify({
+            title: this.newTitle,
+            price: this.newPrice,
+            image: this.newImage
+          })
+        })
 
-            this.newTitle = ''
-            this.newPrice = 0
-            this.newImage = ''
-
-            this.loadProducts()
-        } catch (e) {
-            console.error('Ошибка добавления товара', e)
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('addProduct error:', res.status, text)
+          return alert('Ошибка добавления товара')
         }
-      },
+
+        this.newTitle = ''
+        this.newPrice = 0
+        this.newImage = ''
+        this.selectedFile = null
+
+        await this.loadProducts()
+      } catch (e) {
+        console.error('Ошибка добавления товара', e)
+      }
+    },
+
     async deleteProduct(id) {
-        if (!confirm('Удалить товар?')) return
+      if (!confirm('Удалить товар?')) return
 
-        try {
-            const API_URL = import.meta.env.VITE_API_URL
-            await fetch(`${API_URL}/admin/products/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'X-Admin-Key': this.adminKey
-            }
-            })
+      try {
+        const API_URL = import.meta.env.VITE_API_URL
+        const res = await fetch(`${API_URL}/admin/products/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'X-Admin-Key': this.adminKey
+          }
+        })
 
-            this.loadProducts()
-        } catch (e) {
-            console.error('Ошибка удаления товара', e)
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('deleteProduct error:', res.status, text)
+          return alert('Ошибка удаления товара')
         }
+
+        await this.loadProducts()
+      } catch (e) {
+        console.error('Ошибка удаления товара', e)
       }
     }
+  }
 }
 </script>
+
 
 <style>
 .admin {

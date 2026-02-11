@@ -2,6 +2,8 @@ import json
 import os
 import time
 import uuid
+import requests
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +12,11 @@ from typing import List
 from fastapi import Depends
 from fastapi import Header, HTTPException
 from fastapi import UploadFile, File
+
+load_dotenv()
+
+TG_BOT_TOKEN = os.getenv("8523314046:AAG39KU8cAr9MB2liiVsMkXK99fK13alkn0")
+TG_CHAT_ID = os.getenv("1193436386")
 
 app = FastAPI()
 PRODUCTS_FILE ="products.json"
@@ -24,6 +31,25 @@ def load_products():
 def save_products(products_list):
     with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
         json.dump(products_list, f, ensure_ascii=False, indent=2)
+
+def send_telegram_message(text: str):
+    if not TG_BOT_TOKEN or not TG_CHAT_ID:
+        print("Telegram env not set, skip notify")
+        return
+
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TG_CHAT_ID,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+
+    try:
+        r = requests.post(url, json=payload, timeout=10)
+        if r.status_code != 200:
+            print("Telegram error:", r.status_code, r.text)
+    except Exception as e:
+        print("Telegram exception:", e)
 
 # CORS (обязательно для Vue)
 app.add_middleware(
@@ -112,8 +138,24 @@ def delete_product(product_id: int, _=Depends(check_admin_key)):
     save_products(products)
     return {"status": "ok", "message": "Товар удалён"}
 
+
 @app.post("/order")
 def create_order(order: dict):
+    items_text = "\n".join([
+    f"• {item['title']} x{item['quantity']} = {item['price'] * item['quantity']} ₽"
+    for item in order_data["items"]
+    ])
+
+    msg = (
+        "🧱 <b>Новый заказ!</b>\n\n"
+        f"👤 Имя: <b>{order_data.get('name')}</b>\n"
+        f"📞 Телефон: <b>{order_data.get('phone')}</b>\n"
+        f"🏠 Адрес: <b>{order_data.get('address', '-')}</b>\n\n"
+        f"📦 Товары:\n{items_text}\n\n"
+        f"💰 Итого: <b>{order_data.get('total')} ₽</b>"
+    )
+
+    send_telegram_message(msg)
     new_order = order.copy()
 
     # уникальный id (по времени, этого достаточно для MVP)
