@@ -15,8 +15,8 @@ from fastapi import UploadFile, File
 
 load_dotenv()
 
-TG_BOT_TOKEN = os.getenv("8523314046:AAG39KU8cAr9MB2liiVsMkXK99fK13alkn0")
-TG_CHAT_ID = os.getenv("1193436386")
+os.environ["TG_BOT_TOKEN"] = "8523314046:AAG39KU8cAr9MB2liiVsMkXK99fK13alkn0"
+os.environ["TG_CHAT_ID"] = "1193436386"
 
 app = FastAPI()
 PRODUCTS_FILE ="products.json"
