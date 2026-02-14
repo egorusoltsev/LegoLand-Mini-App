@@ -42,8 +42,8 @@
 
     <div v-else>
       <div
-        v-for="(order, index) in orders"
-        :key="index"
+        v-for="order in sortedOrders"
+        :key="order.id"
         class="order-card"
       >
         <p><b>Имя:</b> {{ order.name }}</p>
@@ -58,6 +58,9 @@
 
         <p><b>Итого:</b> {{ order.total }} ₽</p>
         <p><b>Статус:</b> {{ order.status || 'старый заказ' }}</p>
+        <p v-if="order.created_at">
+          <b>Дата:</b> {{ formatDate(order.created_at) }}
+        </p>
         <div class="status-buttons" v-if="order.id">
           <button @click="setStatus(order.id, 'new')">new</button>
           <button @click="setStatus(order.id, 'confirmed')">confirmed</button>
@@ -100,7 +103,20 @@ export default {
     }
   },
 
+  computed: {
+    sortedOrders() {
+      // новые сверху. если created_at нет (старые заказы) — считаем как 0
+      return [...this.orders].sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+    }
+  },
+
+
   methods: {
+    formatDate(ts) {
+      // ts в секундах
+      return new Date(ts * 1000).toLocaleString()
+    },
+
     login() {
       const key = this.adminKeyInput.trim()
       if (!key) return alert('Введите ключ')

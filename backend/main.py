@@ -162,6 +162,9 @@ def create_order(order: dict):
     new_order["id"] = int(time.time() * 1000)
     new_order["status"] = "new"
 
+    new_order["created_at"] = int(time.time())
+
+
     orders.append(new_order)
     save_orders(orders)
 
@@ -194,7 +197,7 @@ async def upload_image(
 
 @app.get("/orders")
 def get_orders(_=Depends(check_admin_key)):
-    return orders
+    return load_orders()
 
 @app.patch("/orders/{order_id}/status")
 def update_order_status(order_id: int, status: dict, _=Depends(check_admin_key)):
@@ -204,10 +207,12 @@ def update_order_status(order_id: int, status: dict, _=Depends(check_admin_key))
     if new_status not in allowed:
         return {"status": "error", "message": "Неверный статус"}
 
-    for order in orders:
+    orders_list = load_orders()
+
+    for order in orders_list:
         if order.get("id") == order_id:
             order["status"] = new_status
-            save_orders(orders)
+            save_orders(orders_list)
             return {"status": "ok", "message": "Статус обновлён"}
 
     return {"status": "error", "message": "Заказ не найден"}
