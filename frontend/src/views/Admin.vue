@@ -45,6 +45,10 @@
         v-for="order in sortedOrders"
         :key="order.id"
         class="order-card"
+        :class="{
+          focus: focusOrderId && Number(order.id) === Number(focusOrderId),
+          fresh: Number(order.id) > Number(lastSeenOrderId || 0)
+        }"
       >
         <p><b>Имя:</b> {{ order.name }}</p>
         <p><b>Телефон:</b> {{ order.phone }}</p>
@@ -91,7 +95,10 @@ export default {
       newPrice: 0,
       newImage: '',
 
-      selectedFile: null
+      selectedFile: null,
+      lastSeenOrderId: 0,
+      focusOrderId: null,
+      refreshTimer: null
     }
   },
 
@@ -100,14 +107,31 @@ export default {
     if (savedKey) {
       this.adminKey = savedKey
       this.loadAll()
+      this.startAutoRefresh()
     }
+          // 1) фокус на заказ из ссылки Telegram
+      const params = new URLSearchParams(window.location.search)
+      const oid = params.get('order')
+      if (oid) this.focusOrderId = Number(oid)
+
+      // 2) lastSeen для подсветки новых
+      const saved = localStorage.getItem('LAST_SEEN_ORDER_ID')
+      if (saved) this.lastSeenOrderId = Number(saved)
   },
 
   computed: {
     sortedOrders() {
       // новые сверху. если created_at нет (старые заказы) — считаем как 0
       return [...this.orders].sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
-    }
+    },
+    displayedOrders() {
+    // если пришли по ссылке ?order=ID — показываем этот заказ первым
+    if (!this.focusOrderId) return this.sortedOrders
+
+    const top = this.sortedOrders.filter(o => Number(o.id) === this.focusOrderId)
+    const rest = this.sortedOrders.filter(o => Number(o.id) !== this.focusOrderId)
+    return [...top, ...rest]
+  }
   },
 
 
@@ -126,6 +150,7 @@ export default {
       this.adminKeyInput = ''
 
       this.loadAll()
+      this.startAutoRefresh()
     },
 
     logout() {
@@ -133,6 +158,22 @@ export default {
       localStorage.removeItem('ADMIN_KEY')
       this.orders = []
       this.products = []
+
+      this.stopAutoRefresh()
+    },
+
+    startAutoRefresh() {
+      this.stopAutoRefresh()
+      this.refreshTimer = setInterval(() => {
+        this.fetchOrdersAndMarkNew()
+      }, 10000)
+    },
+
+    stopAutoRefresh() {
+      if (this.refreshTimer) {
+        clearInterval(this.refreshTimer)
+        this.refreshTimer = null
+      }
     },
 
     async loadAll() {
@@ -160,6 +201,18 @@ export default {
         console.error('Ошибка загрузки заказов', e)
       }
     },
+
+    async fetchOrdersAndMarkNew() {
+      await this.fetchOrders()
+
+      // обновим lastSeen до максимального id, который уже есть (чтобы новые подсвечивались корректно)
+      const maxId = Math.max(0, ...this.orders.map(o => Number(o.id || 0)))
+      if (maxId > (this.lastSeenOrderId || 0)) {
+        this.lastSeenOrderId = maxId
+        localStorage.setItem('LAST_SEEN_ORDER_ID', String(maxId))
+      }
+    },
+
 
     async setStatus(orderId, newStatus) {
       try {
@@ -338,5 +391,13 @@ export default {
   padding: 8px;
   border: 1px solid #eee;
   margin-bottom: 6px;
+}
+
+.order-card.focus {
+  border: 2px solid #000;
+}
+
+.order-card.fresh {
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
 }
 </style>

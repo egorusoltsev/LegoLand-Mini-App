@@ -17,6 +17,8 @@ load_dotenv()
 
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 TG_CHAT_ID = os.getenv("TG_CHAT_ID")
+ADMIN_KEY = os.getenv("ADMIN_KEY")
+FRONTEND_URL = (os.getenv("FRONTEND_URL") or "").rstrip("/")
 
 app = FastAPI()
 PRODUCTS_FILE ="products.json"
@@ -78,7 +80,6 @@ class Order(BaseModel):
 
 
 ORDERS_FILE = "orders.json"
-ADMIN_KEY = "12345"
 
 def check_admin_key(x_admin_key: str = Header(None)):
     if x_admin_key != ADMIN_KEY:
@@ -141,29 +142,37 @@ def delete_product(product_id: int, _=Depends(check_admin_key)):
 
 @app.post("/order")
 def create_order(order: dict):
+    new_order = order.copy()
+
+    # уникальный id
+    new_order["id"] = int(time.time() * 1000)
+    new_order["status"] = "new"
+    new_order["created_at"] = int(time.time())
+
+    # ссылка на админку на конкретный заказ (без admin key в URL)
+    admin_link = None
+    if FRONTEND_URL:
+        admin_link = f"{FRONTEND_URL}/admin?order={new_order['id']}"
+
     items_text = "\n".join([
-    f"• {item['title']} x{item['quantity']} = {item['price'] * item['quantity']} ₽"
-    for item in order["items"]
+        f"• {item['title']} x{item['quantity']} = {item['price'] * item['quantity']} ₽"
+        for item in new_order["items"]
     ])
 
     msg = (
         "🧱 <b>Новый заказ!</b>\n\n"
-        f"👤 Имя: <b>{order.get('name')}</b>\n"
-        f"📞 Телефон: <b>{order.get('phone')}</b>\n"
-        f"🏠 Адрес: <b>{order.get('address', '-')}</b>\n\n"
+        f"🆔 ID: <code>{new_order['id']}</code>\n"
+        f"👤 Имя: <b>{new_order.get('name')}</b>\n"
+        f"📞 Телефон: <b>{new_order.get('phone')}</b>\n"
+        f"🏠 Адрес: <b>{new_order.get('address', '-')}</b>\n\n"
         f"📦 Товары:\n{items_text}\n\n"
-        f"💰 Итого: <b>{order.get('total')} ₽</b>"
+        f"💰 Итого: <b>{new_order.get('total')} ₽</b>"
     )
 
+    if admin_link:
+        msg += f"\n\n👉 <a href='{admin_link}'>Открыть заказ в админке</a>"
+
     send_telegram_message(msg)
-    new_order = order.copy()
-
-    # уникальный id (по времени, этого достаточно для MVP)
-    new_order["id"] = int(time.time() * 1000)
-    new_order["status"] = "new"
-
-    new_order["created_at"] = int(time.time())
-
 
     orders.append(new_order)
     save_orders(orders)
