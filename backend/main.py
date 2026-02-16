@@ -12,11 +12,19 @@ from typing import List
 from fastapi import Depends
 from fastapi import Header, HTTPException
 from fastapi import UploadFile, File
+from sqlalchemy import create_engine, Column, Integer, String, BigInteger
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 TG_CHAT_ID = os.getenv("TG_CHAT_ID")
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
+Base = declarative_base()
+
 ADMIN_KEY = os.getenv("ADMIN_KEY")
 FRONTEND_URL = (os.getenv("FRONTEND_URL") or "").rstrip("/")
 
@@ -78,6 +86,16 @@ class Order(BaseModel):
     items: List[OrderItem]
     total: int
 
+class OrderModel(Base):
+    __tablename__ = "orders"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    name = Column(String)
+    phone = Column(String)
+    status = Column(String)
+    total = Column(Integer)
+    created_at = Column(BigInteger)
+Base.metadata.create_all(bind=engine)
 
 ORDERS_FILE = "orders.json"
 
