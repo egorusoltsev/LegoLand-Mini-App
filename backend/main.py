@@ -225,3 +225,28 @@ def update_order_status(order_id: int, status: dict, _=Depends(check_admin_key))
             return {"status": "ok", "message": "Статус обновлён"}
 
     return {"status": "error", "message": "Заказ не найден"}
+
+
+@app.get("/public/orders/{order_id}")
+def get_public_order(order_id: int):
+    orders_list = load_orders()
+
+    for o in orders_list:
+        if o.get("id") == order_id:
+            # отдаём только безопасные поля
+            return {
+                "id": o.get("id"),
+                "status": o.get("status", "new"),
+                "created_at": o.get("created_at"),
+                "total": o.get("total", 0),
+                "items": [
+                    {
+                        "title": i.get("title"),
+                        "price": i.get("price"),
+                        "quantity": i.get("quantity"),
+                    }
+                    for i in (o.get("items") or [])
+                ],
+            }
+
+    raise HTTPException(status_code=404, detail="Order not found")
