@@ -192,8 +192,20 @@ def create_order(order: dict):
 
     send_telegram_message(msg)
 
-    orders.append(new_order)
-    save_orders(orders)
+    db = SessionLocal()
+
+    db_order = OrderModel(
+        id=new_order["id"],
+        name=new_order.get("name"),
+        phone=new_order.get("phone"),
+        status=new_order.get("status"),
+        total=new_order.get("total"),
+        created_at=new_order.get("created_at"),
+    )
+
+    db.add(db_order)
+    db.commit()
+    db.close()
 
     return {"status": "ok", "order_id": new_order["id"]}
 
@@ -224,7 +236,22 @@ async def upload_image(
 
 @app.get("/orders")
 def get_orders(_=Depends(check_admin_key)):
-    return load_orders()
+    db = SessionLocal()
+    db_orders = db.query(OrderModel).all()
+    db.close()
+
+    return [
+        {
+            "id": o.id,
+            "name": o.name,
+            "phone": o.phone,
+            "status": o.status,
+            "total": o.total,
+            "created_at": o.created_at,
+        }
+        for o in db_orders
+    ]
+
 
 @app.patch("/orders/{order_id}/status")
 def update_order_status(order_id: int, status: dict, _=Depends(check_admin_key)):
@@ -234,15 +261,19 @@ def update_order_status(order_id: int, status: dict, _=Depends(check_admin_key))
     if new_status not in allowed:
         return {"status": "error", "message": "Неверный статус"}
 
-    orders_list = load_orders()
+    db = SessionLocal()
+    order = db.query(OrderModel).filter(OrderModel.id == order_id).first()
 
-    for order in orders_list:
-        if order.get("id") == order_id:
-            order["status"] = new_status
-            save_orders(orders_list)
-            return {"status": "ok", "message": "Статус обновлён"}
+    if not order:
+        db.close()
+        return {"status": "error", "message": "Заказ не найден"}
 
-    return {"status": "error", "message": "Заказ не найден"}
+    order.status = new_status
+    db.commit()
+    db.close()
+
+    return {"status": "ok", "message": "Статус обновлён"}
+
 
 
 @app.get("/public/orders/{order_id}")
