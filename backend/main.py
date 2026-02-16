@@ -278,24 +278,20 @@ def update_order_status(order_id: int, status: dict, _=Depends(check_admin_key))
 
 @app.get("/public/orders/{order_id}")
 def get_public_order(order_id: int):
-    orders_list = load_orders()
+    db = SessionLocal()
+    order = db.query(OrderModel).filter(OrderModel.id == order_id).first()
 
-    for o in orders_list:
-        if o.get("id") == order_id:
-            # отдаём только безопасные поля
-            return {
-                "id": o.get("id"),
-                "status": o.get("status", "new"),
-                "created_at": o.get("created_at"),
-                "total": o.get("total", 0),
-                "items": [
-                    {
-                        "title": i.get("title"),
-                        "price": i.get("price"),
-                        "quantity": i.get("quantity"),
-                    }
-                    for i in (o.get("items") or [])
-                ],
-            }
+    if not order:
+        db.close()
+        raise HTTPException(status_code=404, detail="Order not found")
 
-    raise HTTPException(status_code=404, detail="Order not found")
+    result = {
+        "id": order.id,
+        "status": order.status,
+        "created_at": order.created_at,
+        "total": order.total,
+        "items": []  # пока без items (мы их ещё не перенесли)
+    }
+
+    db.close()
+    return result
