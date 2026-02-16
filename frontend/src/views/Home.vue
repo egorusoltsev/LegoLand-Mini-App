@@ -163,11 +163,13 @@ export default {
         const data = await res.json()
         console.log('Заказ отправлен:', data)
 
+        const id = data.order_id
+
         this.cart = []
         this.customerName = ''
         this.customerPhone = ''
         this.customerAddress = ''
-        alert('Заказ успешно оформлен!')
+        window.location.href = `/track?order=${id}`
       } catch (e) {
         console.error('Ошибка заказа', e)
       }
