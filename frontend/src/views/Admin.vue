@@ -265,7 +265,7 @@ export default {
         const res = await fetch(`${API_URL}/admin/upload`, {
           method: 'POST',
           headers: {
-            'X-Admin-Key': this.adminKey
+            'x-admin-key': import.meta.env.VITE_ADMIN_KEY
           },
           body: formData
         })
