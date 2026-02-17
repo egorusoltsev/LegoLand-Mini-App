@@ -183,7 +183,7 @@ export default {
 
     async fetchOrders() {
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const res = await fetch(`${API_URL}/orders`, {
           headers: {
             'X-Admin-Key': this.adminKey
@@ -216,8 +216,7 @@ export default {
 
     async setStatus(orderId, newStatus) {
       try {
-        const API_URL = import.meta.env.VITE_API_URL
-
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const patchRes = await fetch(`${API_URL}/orders/${orderId}/status`, {
           method: 'PATCH',
           headers: {
@@ -242,7 +241,7 @@ export default {
 
     async loadProducts() {
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const res = await fetch(`${API_URL}/products`)
         this.products = await res.json()
       } catch (e) {
@@ -258,7 +257,7 @@ export default {
       if (!this.selectedFile) return alert('Выбери файл')
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const formData = new FormData()
         formData.append('file', this.selectedFile)
 
@@ -290,7 +289,7 @@ export default {
       if (!this.newImage.trim()) return alert('Сначала загрузите фото (upload)')
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const res = await fetch(`${API_URL}/admin/products`, {
           method: 'POST',
           headers: {
@@ -325,7 +324,7 @@ export default {
       if (!confirm('Удалить товар?')) return
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const res = await fetch(`${API_URL}/admin/products/${id}`, {
           method: 'DELETE',
           headers: {

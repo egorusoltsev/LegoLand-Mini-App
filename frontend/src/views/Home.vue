@@ -114,7 +114,7 @@ export default {
     },
     async fetchProducts() {
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const res = await fetch(`${API_URL}/products`)
         this.products = await res.json()
       } catch (e) {
@@ -126,7 +126,7 @@ export default {
     },
 
     getImageUrl(image) {
-      const API_URL = import.meta.env.VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         // если уже полный URL — возвращаем как есть
       if (image && (image.startsWith('http://') || image.startsWith('https://'))) {
             return image
@@ -162,7 +162,7 @@ export default {
         } 
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const res = await fetch(`${API_URL}/order`, {
           method: 'POST',
           headers: {

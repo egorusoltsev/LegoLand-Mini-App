@@ -62,7 +62,7 @@ export default {
       this.order = null
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL
+        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const res = await fetch(`${API_URL}/public/orders/${this.orderId}`)
 
         if (!res.ok) {
