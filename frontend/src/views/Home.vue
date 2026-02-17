@@ -4,7 +4,7 @@
 
     <main class="content">
       <h2>Каталог</h2>
-
+      <div v-if="loading">Загрузка товаров...</div>
       <div class="catalog">
         <ProductCard
           v-for="product in products"
@@ -51,7 +51,7 @@
         class="order-btn"
         @click="sendOrder"
       >
-        Оформить заказ
+        {{ submitting ? 'Оформляем...' : 'Оформить заказ' }}
       </button>
     </main>
   </div>
@@ -74,6 +74,7 @@ export default {
       products: [],  // пока пустой массив, данные придут с backend
       cart: [],       // текущая корзина
       loading: true,
+      submitting: false,
       customerName: '',
       customerPhone: '',
       customerAddress: ''
@@ -94,6 +95,8 @@ export default {
       const item = this.cart.find(p => p.id === product.id)
       if(item) item.quantity++
       else this.cart.push({ ...product, quantity: 1 })
+
+      alert('Товар добавлен в корзину')
     },
     increaseQuantity(product) {
       const item = this.cart.find(p => p.id === product.id)
@@ -118,6 +121,7 @@ export default {
         console.error('Ошибка загрузки товаров', e)
       } finally {
         this.loading = false
+        this.submitting = false
       }
     },
 
@@ -130,10 +134,14 @@ export default {
         // иначе считаем, что это имя файла
       return `${API_URL}/images/${image}`
     },
-            async sendOrder() {
-          if (!this.customerName.trim()) {
+
+    async sendOrder() {
+      if (this.submitting) return
+      this.submitting = true
+      if (!this.customerName.trim()) {
           alert('Введите имя')
-        return
+          this.submitting = false
+          return
         }
 
         if (!this.customerPhone.trim()) {
@@ -151,7 +159,7 @@ export default {
             quantity: item.quantity
         })),
           total: this.totalPrice
-        }
+        } 
 
       try {
         const API_URL = import.meta.env.VITE_API_URL
