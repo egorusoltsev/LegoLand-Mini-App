@@ -76,6 +76,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if not os.path.exists("images"):
+    os.makedirs("images")
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 products = load_products()
