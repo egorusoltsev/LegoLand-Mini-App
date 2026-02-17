@@ -88,13 +88,22 @@ class Order(BaseModel):
 
 class OrderModel(Base):
     __tablename__ = "orders"
-
+    
     id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String)
     phone = Column(String)
     status = Column(String)
     total = Column(Integer)
     created_at = Column(BigInteger)
+
+class ProductModel(Base):
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    price = Column(Integer)
+    image = Column(String)
+
 Base.metadata.create_all(bind=engine)
 
 ORDERS_FILE = "orders.json"
@@ -118,43 +127,60 @@ orders = load_orders()
 
 @app.get("/products")
 def get_products():
-    return products
+    db = SessionLocal()
+    db_products = db.query(ProductModel).all()
+    db.close()
+
+    return [
+        {
+            "id": p.id,
+            "title": p.title,
+            "price": p.price,
+            "image": p.image,
+        }
+        for p in db_products
+    ]
+
 
 @app.post("/admin/products")
 def add_product(product: dict, _=Depends(check_admin_key)):
-    # 1) генерируем новый id: берём максимальный существующий + 1
-    new_id = 1
-    if len(products) > 0:
-        new_id = max(p.get("id", 0) for p in products) + 1
+    db = SessionLocal()
 
-    # 2) создаём новый товар
-    new_product = {
-        "id": new_id,
-        "title": product.get("title", ""),
-        "price": product.get("price", 0),
-        "image": product.get("image", "")
+    new_product = ProductModel(
+        title=product.get("title"),
+        price=product.get("price"),
+        image=product.get("image"),
+    )
+
+    db.add(new_product)
+    db.commit()
+    db.refresh(new_product)
+    db.close()
+
+    return {
+        "status": "ok",
+        "product": {
+            "id": new_product.id,
+            "title": new_product.title,
+            "price": new_product.price,
+            "image": new_product.image,
+        }
     }
 
-    # 3) простая проверка (валидация)
-    if not new_product["title"] or not new_product["image"]:
-        return {"status": "error", "message": "title и image обязательны"}
-
-    products.append(new_product)
-    save_products(products)
-
-    return {"status": "ok", "product": new_product}
 
 @app.delete("/admin/products/{product_id}")
 def delete_product(product_id: int, _=Depends(check_admin_key)):
-    global products
-    before = len(products)
+    db = SessionLocal()
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
 
-    products = [p for p in products if p.get("id") != product_id]
-
-    if len(products) == before:
+    if not product:
+        db.close()
         return {"status": "error", "message": "Товар не найден"}
 
-    save_products(products)
+    db.delete(product)
+    db.commit()
+    db.close()
+
     return {"status": "ok", "message": "Товар удалён"}
 
 
