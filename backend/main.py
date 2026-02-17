@@ -15,12 +15,18 @@ from fastapi import UploadFile, File
 from sqlalchemy import create_engine, Column, Integer, String, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from supabase import create_client
+
 
 load_dotenv()
 
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 TG_CHAT_ID = os.getenv("TG_CHAT_ID")
 DATABASE_URL = os.getenv("DATABASE_URL")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
@@ -88,7 +94,7 @@ class Order(BaseModel):
 
 class OrderModel(Base):
     __tablename__ = "orders"
-    
+
     id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String)
     phone = Column(String)
@@ -242,23 +248,30 @@ async def upload_image(
 ):
     if x_admin_key != ADMIN_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
-
-    os.makedirs("images", exist_ok=True)
-
-    # берём расширение
+    
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="Only images allowed")
 
-    # безопасное уникальное имя файла
-    filename = f"{uuid.uuid4().hex}{ext}"
-    path = os.path.join("images", filename)
-
     content = await file.read()
-    with open(path, "wb") as f:
-        f.write(content)
 
-    return {"status": "ok", "filename": filename, "url": f"/images/{filename}"}
+    filename = f"{uuid.uuid4().hex}{ext}"
+
+    # Загружаем в Supabase Storage
+    supabase.storage.from_("product-images").upload(
+        filename,
+        content,
+        {"content-type": file.content_type}
+    )
+
+    # Получаем публичный URL
+    public_url = supabase.storage.from_("product-images").get_public_url(filename)
+
+    return {
+        "status": "ok",
+        "filename": public_url
+    }
+
 
 @app.get("/orders")
 def get_orders(_=Depends(check_admin_key)):

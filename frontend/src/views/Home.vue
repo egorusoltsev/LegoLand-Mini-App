@@ -73,6 +73,7 @@ export default {
     return {
       products: [],  // пока пустой массив, данные придут с backend
       cart: [],       // текущая корзина
+      loading: true,
       customerName: '',
       customerPhone: '',
       customerAddress: ''
@@ -115,6 +116,8 @@ export default {
         this.products = await res.json()
       } catch (e) {
         console.error('Ошибка загрузки товаров', e)
+      } finally {
+        this.loading = false
       }
     },
 
