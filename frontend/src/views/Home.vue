@@ -183,7 +183,10 @@ export default {
         window.location.href = `/track?order=${id}`
       } catch (e) {
         console.error('Ошибка заказа', e)
+      } finally {
+        this.submitting = false
       }
+
     }
   },
 
