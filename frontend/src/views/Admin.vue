@@ -22,7 +22,13 @@
     <input v-model="newTitle" class="input" placeholder="Название" />
     <input v-model.number="newPrice" class="input" type="number" placeholder="Цена" />
     <input v-model="newImage" class="input" placeholder="image (например xwing.jpg)" />
-    <button @click="addProduct">Добавить</button>
+    <button 
+      @click="addProduct"
+      :disabled="!newTitle.trim() || !newImage"
+    >
+      Добавить
+    </button>
+
     <input type="file" @change="onFileChange" />
     <button @click="uploadImage">Загрузить фото</button>
     </div>
@@ -399,4 +405,11 @@ export default {
 .order-card.fresh {
   box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
 }
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 </style>
+
