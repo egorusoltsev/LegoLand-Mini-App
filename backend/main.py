@@ -559,6 +559,7 @@ def get_public_order(order_id: int):
 @app.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
     data = await request.json()
+    print("TELEGRAM UPDATE:", data)
 
     if "message" not in data:
         return {"ok": True}
@@ -567,13 +568,18 @@ async def telegram_webhook(request: Request):
     text = message.get("text", "")
     chat_id = message["chat"]["id"]
 
+    print("TEXT:", text)
+
     if text.startswith("/start web_"):
         code = text.replace("/start web_", "").strip()
         success = attach_telegram_to_session(code, chat_id)
 
+        print("AUTH CODE:", code, "SUCCESS:", success)
+
         if success:
             send_telegram_reply(chat_id, "✅ Вы успешно авторизованы. Вернитесь на сайт.")
         else:
-            send_telegram_reply(chat_id, "❌ Сессия устарела или недействительна.")
+            send_telegram_reply(chat_id, "❌ Сессия устарела.")
 
     return {"ok": True}
+
