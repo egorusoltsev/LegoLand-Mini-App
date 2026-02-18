@@ -11,7 +11,15 @@
       <div v-if="!user">
         <p>Войдите через Telegram, чтобы видеть свои заказы.</p>
 
-        <div ref="telegramWidget"></div>
+        <script
+        async
+        src="https://telegram.org/js/telegram-widget.js?22"
+        :data-telegram-login="botUsername"
+        data-size="large"
+        data-onauth="onTelegramAuth(user)"
+        data-request-access="write"
+        ></script>
+
       </div>
 
       <!-- ЗАЛОГИНЕН -->
@@ -65,11 +73,13 @@ export default {
       user: null,
       orders: [],
       ordersLoading: false,
+      botUsername: import.meta.env.VITE_TG_BOT_USERNAME
     }
   },
 
   mounted() {
     this.init()
+    window.onTelegramAuth = this.onTelegramAuth
   },
 
   methods: {
