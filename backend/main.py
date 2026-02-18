@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 import requests
+import secrets
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from supabase import create_client
 from auth import verify_telegram_login, create_jwt, get_current_user_id
-
+from sqlalchemy import Boolean
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -73,6 +74,14 @@ def send_telegram_message(text: str):
             print("Telegram error:", r.status_code, r.text)
     except Exception as e:
         print("Telegram exception:", e)
+
+def send_telegram_reply(chat_id: int, text: str):
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+    requests.post(url, json=payload)
 
 # CORS (обязательно для Vue)
 app.add_middleware(
@@ -129,6 +138,15 @@ class UserModel(Base):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)
+
+class AuthSessionModel(Base):
+    __tablename__ = "auth_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String, unique=True, index=True)
+    telegram_id = Column(BigInteger, nullable=True)
+    created_at = Column(BigInteger)
+    used = Column(Boolean, default=False)
 
 class TelegramAuthPayload(BaseModel):
     data: Dict[str, Any]
@@ -196,6 +214,23 @@ def save_orders(orders_list):
     with open(ORDERS_FILE, "w", encoding="utf-8") as f:
         json.dump(orders_list, f, ensure_ascii=False, indent=2)
 orders = load_orders()
+
+def attach_telegram_to_session(code: str, telegram_id: int):
+    db = SessionLocal()
+
+    session = db.query(AuthSessionModel).filter(
+        AuthSessionModel.code == code,
+        AuthSessionModel.used == False
+    ).first()
+
+    if not session:
+        db.close()
+        return False
+
+    session.telegram_id = telegram_id
+    db.commit()
+    db.close()
+    return True
 
 @app.get("/products")
 def get_products():
@@ -312,7 +347,7 @@ def create_order(order: dict, user_id: Optional[int] = Depends(get_optional_user
 async def upload_image(
     file: UploadFile = File(...),
     x_admin_key: str = Header(None)
-):
+    ):
     if x_admin_key != ADMIN_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
@@ -339,38 +374,24 @@ async def upload_image(
         "filename": public_url
     }
 
-@app.post("/auth/telegram")
-def auth_telegram(payload: TelegramAuthPayload):
-    tg = verify_telegram_login(payload.data)
+@app.post("/auth/telegram/init")
+def init_telegram_auth():
+    db = SessionLocal()
 
-    if not tg.get("id"):
-        raise HTTPException(status_code=400, detail="Invalid telegram data")
+    code = secrets.token_hex(16)
 
-    telegram_id = int(tg["id"])
-    username = tg.get("username")
-    first_name = tg.get("first_name")
-    last_name = tg.get("last_name")
-    photo_url = tg.get("photo_url")
-
-    user_id = upsert_user_and_get_id(
-        telegram_id,
-        username,
-        first_name,
-        last_name,
-        photo_url
+    session = AuthSessionModel(
+        code=code,
+        telegram_id=None,
+        created_at=int(time.time()),
+        used=False
     )
 
-    token = create_jwt(user_id)
+    db.add(session)
+    db.commit()
+    db.close()
 
-    return {
-        "token": token,
-        "user": {
-            "id": user_id,
-            "telegram_id": telegram_id,
-            "username": username,
-            "first_name": first_name,
-        }
-    }
+    return {"code": code}
 
 
 @app.get("/orders")
@@ -444,6 +465,53 @@ def get_my_orders(user_id: int = Depends(get_current_user_id)):
     finally:
         db.close()
 
+from auth import create_jwt  # если JWT у тебя в auth.py
+
+@app.get("/auth/telegram/check")
+def check_telegram_auth(code: str):
+    db = SessionLocal()
+
+    session = db.query(AuthSessionModel).filter(
+        AuthSessionModel.code == code
+    ).first()
+
+    if not session:
+        db.close()
+        return {"status": "not_found"}
+
+    if session.telegram_id is None:
+        db.close()
+        return {"status": "pending"}
+
+    # пользователь подтвердился в боте
+    telegram_id = session.telegram_id
+
+    # найти или создать user
+    user = db.query(UserModel).filter(
+        UserModel.telegram_id == telegram_id
+    ).first()
+
+    if not user:
+        user = UserModel(
+            telegram_id=telegram_id,
+            created_at=int(time.time())
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    session.used = True
+    db.commit()
+    db.close()
+
+    token = create_jwt(user.id)
+
+    return {
+        "status": "ok",
+        "token": token
+    }
+
+
 
 @app.patch("/orders/{order_id}/status")
 def update_order_status(order_id: int, status: dict, _=Depends(check_admin_key)):
@@ -487,3 +555,25 @@ def get_public_order(order_id: int):
 
     db.close()
     return result
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    data = await request.json()
+
+    if "message" not in data:
+        return {"ok": True}
+
+    message = data["message"]
+    text = message.get("text", "")
+    chat_id = message["chat"]["id"]
+
+    if text.startswith("/start web_"):
+        code = text.replace("/start web_", "").strip()
+        success = attach_telegram_to_session(code, chat_id)
+
+        if success:
+            send_telegram_reply(chat_id, "✅ Вы успешно авторизованы. Вернитесь на сайт.")
+        else:
+            send_telegram_reply(chat_id, "❌ Сессия устарела или недействительна.")
+
+    return {"ok": True}

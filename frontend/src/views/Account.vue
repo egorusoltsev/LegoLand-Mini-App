@@ -9,9 +9,12 @@
     <div v-else>
       <!-- НЕ ЗАЛОГИНЕН -->
       <div v-if="!user">
-        <p>Войдите через Telegram, чтобы видеть свои заказы.</p>
-        <div ref="telegramWidget"></div>
+        <p>Чтобы оформить заказ, войдите через Telegram.</p>
+        <button @click="startTelegramAuth">
+            Войти через Telegram
+        </button>
       </div>
+
 
       <!-- ЗАЛОГИНЕН -->
       <div v-else>
@@ -63,8 +66,7 @@ export default {
       loading: true,
       user: null,
       orders: [],
-      ordersLoading: false,
-      botUsername: import.meta.env.VITE_TG_BOT_USERNAME
+      ordersLoading: false
     }
   },
 
@@ -74,25 +76,19 @@ export default {
     this.init()
   },
 
-  
+
   methods: {
     async init() {
-      const token = getToken()
+        const token = getToken()
 
-      if (token) {
-        await this.loadMe()
-        if (this.user) {
-          await this.loadOrders()
+        if (token) {
+            await this.loadMe()
+            if (this.user) {
+                await this.loadOrders()
         }
-        this.loading = false
-        return
       }
-
-      // нет токена → показываем виджет
-      this.loading = false
-      this.$nextTick(() => {
-        this.renderTelegramWidget()
-      })
+        this.loading = false
+                
     },
 
 
@@ -134,61 +130,40 @@ export default {
       })
     },
 
-    async onTelegramAuth(tgUser) {
-      const r = await apiFetch("/auth/telegram", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
+    async startTelegramAuth() {
+        const r = await apiFetch("/auth/telegram/init", {
+            method: "POST"
+        })
+
+        if (!r.ok) {
+            alert("Ошибка запуска авторизации")
+            return
+        }
+
+        const data = await r.json()
+        const code = data.code
+
+        // открываем бота
+        window.open(
+            `https://t.me/legoland_orders_bot?start=web_${code}`,
+            "_blank"
+        )
+
+        // начинаем polling
+        this.pollAuth(code)
         },
-        body: JSON.stringify({ data: tgUser })
-      })
 
-      if (!r.ok) {
-        alert("Ошибка входа через Telegram")
-        return
-      }
+        pollAuth(code) {
+        const interval = setInterval(async () => {
+            const r = await apiFetch(`/auth/telegram/check?code=${code}`)
+            const data = await r.json()
 
-      const data = await r.json()
-      setToken(data.token)
-
-      await this.loadMe()
-      if (this.user) {
-        await this.loadOrders()
-      }
-    },
-
-    renderTelegramWidget() {
-      // если username не задан — виджет не появится
-      if (!this.botUsername) {
-        console.error("VITE_TG_BOT_USERNAME is missing")
-        return
-      }
-
-      const container = this.$refs.telegramWidget
-      if (!container) return
-
-      container.innerHTML = ""
-
-      // глобальная функция для telegram-widget
-      window.onTelegramAuth = (user) => {
-        this.onTelegramAuth(user)
-      }
-
-      const script = document.createElement("script")
-      script.src = "https://telegram.org/js/telegram-widget.js?22"
-      script.async = true
-      script.setAttribute("data-telegram-login", this.botUsername)
-      script.setAttribute("data-size", "large")
-      script.setAttribute("data-onauth", "onTelegramAuth(user)")
-      script.setAttribute("data-request-access", "write")
-
-      container.appendChild(script)
-    },
-
-
-    formatDate(ts) {
-      const d = new Date(ts * 1000)
-      return d.toLocaleString()
+            if (data.status === "ok") {
+            clearInterval(interval)
+            setToken(data.token)
+            window.location.reload()
+            }
+        }, 2000)
     }
   }
 }
