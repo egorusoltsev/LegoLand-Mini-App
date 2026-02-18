@@ -10,16 +10,7 @@
       <!-- НЕ ЗАЛОГИНЕН -->
       <div v-if="!user">
         <p>Войдите через Telegram, чтобы видеть свои заказы.</p>
-
-        <script
-        async
-        src="https://telegram.org/js/telegram-widget.js?22"
-        :data-telegram-login="botUsername"
-        data-size="large"
-        data-onauth="onTelegramAuth(user)"
-        data-request-access="write"
-        ></script>
-
+        <div ref="telegramWidget"></div>
       </div>
 
       <!-- ЗАЛОГИНЕН -->
@@ -78,9 +69,13 @@ export default {
   },
 
   mounted() {
-    this.init()
-    window.onTelegramAuth = this.onTelegramAuth
+    console.log("BOT USERNAME:", this.botUsername)
+
+    if (!this.user) {
+        this.renderTelegramWidget()
+    }
   },
+
 
   methods: {
     async init() {
@@ -149,26 +144,25 @@ export default {
       await this.loadOrders()
     },
 
-    renderTelegramWidget() {
-      if (!this.$refs.telegramWidget) return
+   renderTelegramWidget() {
+    const container = this.$refs.telegramWidget
+    if (!container) return
 
-      this.$refs.telegramWidget.innerHTML = ""
+    container.innerHTML = ""
 
-      const script = document.createElement("script")
-      script.src = "https://telegram.org/js/telegram-widget.js?22"
-      script.async = true
-      script.setAttribute(
-        "data-telegram-login",
-        import.meta.env.VITE_TG_BOT_USERNAME
-      )
-      script.setAttribute("data-size", "large")
-      script.setAttribute("data-onauth", "onTelegramAuth(user)")
-      script.setAttribute("data-request-access", "write")
+    const script = document.createElement("script")
+    script.src = "https://telegram.org/js/telegram-widget.js?22"
+    script.async = true
+    script.setAttribute("data-telegram-login", this.botUsername)
+    script.setAttribute("data-size", "large")
+    script.setAttribute("data-onauth", "onTelegramAuth(user)")
+    script.setAttribute("data-request-access", "write")
 
-      window.onTelegramAuth = this.onTelegramAuth
+    window.onTelegramAuth = this.onTelegramAuth
 
-      this.$refs.telegramWidget.appendChild(script)
+    container.appendChild(script)
     },
+
 
     formatDate(ts) {
       const d = new Date(ts * 1000)
