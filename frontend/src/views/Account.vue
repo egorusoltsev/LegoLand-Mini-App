@@ -70,27 +70,29 @@ export default {
 
   mounted() {
     console.log("BOT USERNAME:", this.botUsername)
-
-    if (!this.user) {
-        this.renderTelegramWidget()
-    }
+    // ВАЖНО: стартуем через init()
+    this.init()
   },
 
-
+  
   methods: {
     async init() {
-        const token = getToken()
+      const token = getToken()
 
-        if (token) {
-            await this.loadMe()
-            await this.loadOrders()
-            this.loading = false
-        } else {
-            this.loading = false
-            this.$nextTick(() => {
-            this.renderTelegramWidget()
-            })
+      if (token) {
+        await this.loadMe()
+        if (this.user) {
+          await this.loadOrders()
         }
+        this.loading = false
+        return
+      }
+
+      // нет токена → показываем виджет
+      this.loading = false
+      this.$nextTick(() => {
+        this.renderTelegramWidget()
+      })
     },
 
 
@@ -114,6 +116,8 @@ export default {
       if (r.ok) {
         const data = await r.json()
         this.orders = data.orders || []
+      } else {
+        this.orders = []
       }
 
       this.ordersLoading = false
@@ -123,16 +127,20 @@ export default {
       clearToken()
       this.user = null
       this.orders = []
-      this.renderTelegramWidget()
+      this.loading = false
+
+      this.$nextTick(() => {
+        this.renderTelegramWidget()
+      })
     },
 
     async onTelegramAuth(tgUser) {
       const r = await apiFetch("/auth/telegram", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ data: tgUser }),
+        body: JSON.stringify({ data: tgUser })
       })
 
       if (!r.ok) {
@@ -144,33 +152,44 @@ export default {
       setToken(data.token)
 
       await this.loadMe()
-      await this.loadOrders()
+      if (this.user) {
+        await this.loadOrders()
+      }
     },
 
-   renderTelegramWidget() {
-    const container = this.$refs.telegramWidget
-    if (!container) return
+    renderTelegramWidget() {
+      // если username не задан — виджет не появится
+      if (!this.botUsername) {
+        console.error("VITE_TG_BOT_USERNAME is missing")
+        return
+      }
 
-    container.innerHTML = ""
+      const container = this.$refs.telegramWidget
+      if (!container) return
 
-    const script = document.createElement("script")
-    script.src = "https://telegram.org/js/telegram-widget.js?22"
-    script.async = true
-    script.setAttribute("data-telegram-login", this.botUsername)
-    script.setAttribute("data-size", "large")
-    script.setAttribute("data-onauth", "onTelegramAuth(user)")
-    script.setAttribute("data-request-access", "write")
+      container.innerHTML = ""
 
-    window.onTelegramAuth = this.onTelegramAuth
+      // глобальная функция для telegram-widget
+      window.onTelegramAuth = (user) => {
+        this.onTelegramAuth(user)
+      }
 
-    container.appendChild(script)
+      const script = document.createElement("script")
+      script.src = "https://telegram.org/js/telegram-widget.js?22"
+      script.async = true
+      script.setAttribute("data-telegram-login", this.botUsername)
+      script.setAttribute("data-size", "large")
+      script.setAttribute("data-onauth", "onTelegramAuth(user)")
+      script.setAttribute("data-request-access", "write")
+
+      container.appendChild(script)
     },
 
 
     formatDate(ts) {
       const d = new Date(ts * 1000)
       return d.toLocaleString()
-    },
-  },
+    }
+  }
 }
 </script>
