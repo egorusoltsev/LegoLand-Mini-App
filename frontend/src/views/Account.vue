@@ -79,17 +79,20 @@ export default {
 
   methods: {
     async init() {
-      const token = getToken()
+        const token = getToken()
 
-      if (token) {
-        await this.loadMe()
-        await this.loadOrders()
-      } else {
-        this.renderTelegramWidget()
-      }
-
-      this.loading = false
+        if (token) {
+            await this.loadMe()
+            await this.loadOrders()
+            this.loading = false
+        } else {
+            this.loading = false
+            this.$nextTick(() => {
+            this.renderTelegramWidget()
+            })
+        }
     },
+
 
     async loadMe() {
       const r = await apiFetch("/me")
