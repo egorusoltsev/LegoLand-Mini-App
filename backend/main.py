@@ -7,18 +7,21 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional, Dict, Any
 from fastapi import Depends
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 from fastapi import UploadFile, File
 from sqlalchemy import create_engine, Column, Integer, String, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from supabase import create_client
+from auth import verify_telegram_login, create_jwt, get_current_user_id
 
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
+
 
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 TG_CHAT_ID = os.getenv("TG_CHAT_ID")
@@ -35,7 +38,10 @@ ADMIN_KEY = os.getenv("ADMIN_KEY")
 FRONTEND_URL = (os.getenv("FRONTEND_URL") or "").rstrip("/")
 
 app = FastAPI()
+security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 PRODUCTS_FILE ="products.json"
+
 def load_products():
     if not os.path.exists(PRODUCTS_FILE):
         return []
@@ -44,6 +50,7 @@ def load_products():
             return json.load(f)
     except Exception:
         return []
+    
 def save_products(products_list):
     with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
         json.dump(products_list, f, ensure_ascii=False, indent=2)
@@ -103,6 +110,7 @@ class OrderModel(Base):
     status = Column(String)
     total = Column(Integer)
     created_at = Column(BigInteger)
+    user_id = Column(BigInteger, nullable=True)
 
 class ProductModel(Base):
     __tablename__ = "products"
@@ -112,6 +120,19 @@ class ProductModel(Base):
     price = Column(Integer)
     image = Column(String)
 
+class UserModel(Base):
+    __tablename__ = "users"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    telegram_id = Column(BigInteger, unique=True, index=True, nullable=False)
+    username = Column(String, nullable=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    photo_url = Column(String, nullable=True)
+
+class TelegramAuthPayload(BaseModel):
+    data: Dict[str, Any]
+
 Base.metadata.create_all(bind=engine)
 
 ORDERS_FILE = "orders.json"
@@ -119,6 +140,36 @@ ORDERS_FILE = "orders.json"
 def check_admin_key(x_admin_key: str = Header(None)):
     if x_admin_key != ADMIN_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+def upsert_user_and_get_id(telegram_id, username, first_name, last_name, photo_url):
+    db = SessionLocal()
+    try:
+        user = db.query(UserModel).filter(UserModel.telegram_id == telegram_id).first()
+
+        if user:
+            user.username = username
+            user.first_name = first_name
+            user.last_name = last_name
+            user.photo_url = photo_url
+            db.commit()
+            db.refresh(user)
+            return user.id
+
+        new_user = UserModel(
+            telegram_id=telegram_id,
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            photo_url=photo_url,
+        )
+
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user.id
+
+    finally:
+        db.close()
 
 def load_orders():
     if not os.path.exists(ORDERS_FILE):
@@ -128,6 +179,19 @@ def load_orders():
             return json.load(f)
     except Exception:
         return []
+    
+def get_user_id_from_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    return get_current_user_id(credentials)
+
+def get_optional_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(optional_security)
+):
+    if not credentials:
+        return None
+    return get_current_user_id(credentials)
+
 def save_orders(orders_list):
     with open(ORDERS_FILE, "w", encoding="utf-8") as f:
         json.dump(orders_list, f, ensure_ascii=False, indent=2)
@@ -193,7 +257,7 @@ def delete_product(product_id: int, _=Depends(check_admin_key)):
 
 
 @app.post("/order")
-def create_order(order: dict):
+def create_order(order: dict, user_id: Optional[int] = Depends(get_optional_user_id)):
     new_order = order.copy()
 
     # уникальный id
@@ -235,6 +299,7 @@ def create_order(order: dict):
         status=new_order.get("status"),
         total=new_order.get("total"),
         created_at=new_order.get("created_at"),
+        user_id=user_id
     )
 
     db.add(db_order)
@@ -274,6 +339,39 @@ async def upload_image(
         "filename": public_url
     }
 
+@app.post("/auth/telegram")
+def auth_telegram(payload: TelegramAuthPayload):
+    tg = verify_telegram_login(payload.data)
+
+    if not tg.get("id"):
+        raise HTTPException(status_code=400, detail="Invalid telegram data")
+
+    telegram_id = int(tg["id"])
+    username = tg.get("username")
+    first_name = tg.get("first_name")
+    last_name = tg.get("last_name")
+    photo_url = tg.get("photo_url")
+
+    user_id = upsert_user_and_get_id(
+        telegram_id,
+        username,
+        first_name,
+        last_name,
+        photo_url
+    )
+
+    token = create_jwt(user_id)
+
+    return {
+        "token": token,
+        "user": {
+            "id": user_id,
+            "telegram_id": telegram_id,
+            "username": username,
+            "first_name": first_name,
+        }
+    }
+
 
 @app.get("/orders")
 def get_orders(_=Depends(check_admin_key)):
@@ -292,6 +390,59 @@ def get_orders(_=Depends(check_admin_key)):
         }
         for o in db_orders
     ]
+
+@app.get("/me")
+def get_me(user_id: int = Depends(get_current_user_id)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = SessionLocal()
+    try:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return {
+            "user": {
+                "id": user.id,
+                "telegram_id": user.telegram_id,
+                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "photo_url": user.photo_url,
+            }
+        }
+    finally:
+        db.close()
+
+@app.get("/my/orders")
+def get_my_orders(user_id: int = Depends(get_current_user_id)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = SessionLocal()
+    try:
+        orders = (
+            db.query(OrderModel)
+            .filter(OrderModel.user_id == user_id)
+            .order_by(OrderModel.created_at.desc())
+            .all()
+        )
+
+        return {
+            "orders": [
+                {
+                    "id": o.id,
+                    "status": o.status,
+                    "total": o.total,
+                    "created_at": o.created_at,
+                }
+                for o in orders
+            ]
+        }
+    finally:
+        db.close()
 
 
 @app.patch("/orders/{order_id}/status")

@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <Header />
-
+  <a href="/account">Аккаунт</a>
     <main class="content">
       <h2>Каталог</h2>
       <div v-if="loading">Загрузка товаров...</div>
