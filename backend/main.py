@@ -533,3 +533,8 @@ async def telegram_webhook(request: Request):
 
     return {"ok": True}
 
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+
