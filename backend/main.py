@@ -493,8 +493,7 @@ def check_telegram_auth(code: str):
 
     if not user:
         user = UserModel(
-            telegram_id=telegram_id,
-            created_at=int(time.time())
+            telegram_id=telegram_id
         )
         db.add(user)
         db.commit()
