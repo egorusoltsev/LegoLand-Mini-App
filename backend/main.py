@@ -12,6 +12,9 @@ from routers.admin import router as admin_router
 from routers.auth import router as auth_router
 from routers.telegram import router as telegram_router
 
+from auth.jwt import create_jwt
+
+
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 app = FastAPI()
