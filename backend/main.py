@@ -471,46 +471,46 @@ from auth import create_jwt  # если JWT у тебя в auth.py
 def check_telegram_auth(code: str):
     db = SessionLocal()
 
-    session = db.query(AuthSessionModel).filter(
-        AuthSessionModel.code == code
-    ).first()
+    try:
+        session = db.query(AuthSessionModel).filter(
+            AuthSessionModel.code == code
+        ).first()
 
-    if not session:
-        db.close()
-        return {"status": "not_found"}
+        if not session:
+            return {"status": "not_found"}
 
-    if session.telegram_id is None:
-        db.close()
-        return {"status": "pending"}
+        if session.telegram_id is None:
+            return {"status": "pending"}
 
-    # пользователь подтвердился в боте
-    telegram_id = session.telegram_id
+        telegram_id = session.telegram_id
 
-    # найти или создать user
-    user = db.query(UserModel).filter(
-        UserModel.telegram_id == telegram_id
-    ).first()
+        user = db.query(UserModel).filter(
+            UserModel.telegram_id == telegram_id
+        ).first()
 
-    if not user:
-        user = UserModel(
-            telegram_id=telegram_id
-        )
-        db.add(user)
+        if not user:
+            user = UserModel(
+                telegram_id=telegram_id
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        user_id = user.id  # ← КРИТИЧНО: получаем ДО закрытия сессии
+
+        session.used = True
         db.commit()
-        db.refresh(user)
 
-    user_id = user.id
+        token = create_jwt(user_id)
 
-    session.used = True
-    db.commit()
-    db.close()
+        return {
+            "status": "ok",
+            "token": token
+        }
 
-    token = create_jwt(user.id)
+    finally:
+        db.close()
 
-    return {
-        "status": "ok",
-        "token": token
-    }
 
 
 
