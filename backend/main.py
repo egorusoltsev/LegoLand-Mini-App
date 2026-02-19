@@ -20,6 +20,8 @@ from sqlalchemy.orm import sessionmaker
 from supabase import create_client
 from auth import verify_telegram_login, create_jwt, get_current_user_id
 from sqlalchemy import Boolean
+from db import Base, engine
+from models import *
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -31,9 +33,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
-Base = declarative_base()
+
 
 ADMIN_KEY = os.getenv("ADMIN_KEY")
 FRONTEND_URL = (os.getenv("FRONTEND_URL") or "").rstrip("/")
@@ -42,6 +42,8 @@ app = FastAPI()
 security = HTTPBearer()
 optional_security = HTTPBearer(auto_error=False)
 PRODUCTS_FILE ="products.json"
+
+Base.metadata.create_all(bind=engine)
 
 def load_products():
     if not os.path.exists(PRODUCTS_FILE):
@@ -98,60 +100,7 @@ app.mount("/images", StaticFiles(directory="images"), name="images")
 
 products = load_products()
 
-class OrderItem(BaseModel):
-    id: int
-    title: str
-    price: int
-    quantity: int
 
-class Order(BaseModel):
-    name: str
-    phone: str
-    items: List[OrderItem]
-    total: int
-
-class OrderModel(Base):
-    __tablename__ = "orders"
-
-    id = Column(BigInteger, primary_key=True, index=True)
-    name = Column(String)
-    phone = Column(String)
-    status = Column(String)
-    total = Column(Integer)
-    created_at = Column(BigInteger)
-    user_id = Column(BigInteger, nullable=True)
-
-class ProductModel(Base):
-    __tablename__ = "products"
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String)
-    price = Column(Integer)
-    image = Column(String)
-
-class UserModel(Base):
-    __tablename__ = "users"
-
-    id = Column(BigInteger, primary_key=True, index=True)
-    telegram_id = Column(BigInteger, unique=True, index=True, nullable=False)
-    username = Column(String, nullable=True)
-    first_name = Column(String, nullable=True)
-    last_name = Column(String, nullable=True)
-    photo_url = Column(String, nullable=True)
-
-class AuthSessionModel(Base):
-    __tablename__ = "auth_sessions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True)
-    telegram_id = Column(BigInteger, nullable=True)
-    created_at = Column(BigInteger)
-    used = Column(Boolean, default=False)
-
-class TelegramAuthPayload(BaseModel):
-    data: Dict[str, Any]
-
-Base.metadata.create_all(bind=engine)
 
 ORDERS_FILE = "orders.json"
 
