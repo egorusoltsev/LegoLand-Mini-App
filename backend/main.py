@@ -20,7 +20,7 @@ from sqlalchemy.orm import sessionmaker
 from supabase import create_client
 from auth import verify_telegram_login, create_jwt, get_current_user_id
 from sqlalchemy import Boolean
-from db import Base, engine
+from db import Base, engine, SessionLocal
 from models import *
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
