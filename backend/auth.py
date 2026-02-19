@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from fastapi import HTTPException, Header
 from fastapi.security import HTTPAuthorizationCredentials
-from fastapi import HTTPException
 
 import jwt
 
