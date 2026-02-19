@@ -1,16 +1,15 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException
 from db import SessionLocal
-from models import OrderModel
 from auth.dependencies import check_admin_key, get_user_id_from_token
 from utils.telegram import send_telegram_message
+from models import OrderModel, OrderItemModel  # ← добавь OrderItemModel
 
 router = APIRouter()
 
 
 @router.post("/order")
 def create_order(order: dict, user_id: int = Depends(get_user_id_from_token)):
-    # ВАЖНО: теперь без токена нельзя оформить заказ
     new_order = order.copy()
     new_order["id"] = int(time.time() * 1000)
     new_order["status"] = "new"
@@ -36,21 +35,35 @@ def create_order(order: dict, user_id: int = Depends(get_user_id_from_token)):
     send_telegram_message(msg)
 
     db = SessionLocal()
-    db_order = OrderModel(
-        id=new_order["id"],
-        name=new_order.get("name"),
-        phone=new_order.get("phone"),
-        status=new_order.get("status"),
-        total=new_order.get("total"),
-        created_at=new_order.get("created_at"),
-        user_id=user_id,
-    )
-    db.add(db_order)
-    db.commit()
-    db.close()
+
+    try:
+        db_order = OrderModel(
+            id=new_order["id"],
+            name=new_order.get("name"),
+            phone=new_order.get("phone"),
+            status=new_order.get("status"),
+            total=new_order.get("total"),
+            created_at=new_order.get("created_at"),
+            user_id=user_id   # ← ВОТ ТАК правильно
+        )
+
+        db.add(db_order)
+
+        for item in new_order.get("items", []):
+            db_item = OrderItemModel(
+                order_id=new_order["id"],
+                product_id=item["id"],
+                quantity=item["quantity"],
+                price=item["price"]
+            )
+            db.add(db_item)   # ← внутри цикла
+
+        db.commit()
+
+    finally:
+        db.close()
 
     return {"status": "ok", "order_id": new_order["id"]}
-
 
 @router.get("/orders")
 def get_orders(_=Depends(check_admin_key)):

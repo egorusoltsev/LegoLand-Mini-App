@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, BigInteger, Boolean
+from sqlalchemy import Column, Integer, String, BigInteger, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from db import Base
-
 
 class OrderModel(Base):
     __tablename__ = "orders"
@@ -12,6 +12,7 @@ class OrderModel(Base):
     total = Column(Integer)
     created_at = Column(BigInteger)
     user_id = Column(BigInteger, nullable=True)
+    items = relationship("OrderItemModel", backref="order")
 
 
 class ProductModel(Base):
@@ -42,3 +43,13 @@ class AuthSessionModel(Base):
     telegram_id = Column(BigInteger, nullable=True)
     created_at = Column(BigInteger)
     used = Column(Boolean, default=False)
+
+
+class OrderItemModel(Base):
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(BigInteger, ForeignKey("orders.id"))
+    product_id = Column(Integer)
+    quantity = Column(Integer)
+    price = Column(Integer)

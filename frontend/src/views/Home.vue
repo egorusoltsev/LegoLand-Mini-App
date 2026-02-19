@@ -60,6 +60,8 @@
 <script>
 import Header from '../components/Header.vue'
 import ProductCard from '../components/ProductCard.vue'
+import { apiFetch } from "../api"
+import { getToken } from "../authToken"
 
 export default {
   name: 'App',
@@ -138,6 +140,12 @@ export default {
     async sendOrder() {
       if (this.submitting) return
       this.submitting = true
+      const token = getToken()
+      if (!token) {
+        this.submitting = false
+        window.location.href = "/account"
+        return
+        }
       if (!this.customerName.trim()) {
           alert('Введите имя')
           this.submitting = false
@@ -162,14 +170,22 @@ export default {
         } 
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const res = await fetch(`${API_URL}/order`, {
-          method: 'POST',
+        const res = await apiFetch("/order", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json"
           },
           body: JSON.stringify(order)
         })
+
+        if (!res.ok) {
+          // если 401 — apiFetch уже редиректнул в /account
+          const txt = await res.text()
+          console.error("Order failed:", res.status, txt)
+          alert("Не удалось оформить заказ. Войдите через Telegram и попробуйте снова.")
+          this.submitting = false
+          return
+        }
 
         const data = await res.json()
         console.log('Заказ отправлен:', data)

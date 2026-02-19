@@ -13,6 +13,9 @@
         <button @click="startTelegramAuth">
             Войти через Telegram
         </button>
+        <p v-if="authError" style="margin-top:10px; color:#b00020;">
+        {{ authError }}
+        </p>
       </div>
 
 
@@ -66,13 +69,13 @@ export default {
       loading: true,
       user: null,
       orders: [],
-      ordersLoading: false
+      ordersLoading: false,
+      authError: "",
+      botUsername: import.meta.env.VITE_TG_BOT_USERNAME
     }
   },
 
   mounted() {
-    console.log("BOT USERNAME:", this.botUsername)
-    // ВАЖНО: стартуем через init()
     this.init()
   },
 
@@ -88,7 +91,7 @@ export default {
         }
       }
         this.loading = false
-                
+
     },
 
 
@@ -120,14 +123,10 @@ export default {
     },
 
     async logout() {
-      clearToken()
-      this.user = null
-      this.orders = []
-      this.loading = false
-
-      this.$nextTick(() => {
-        this.renderTelegramWidget()
-      })
+        clearToken()
+        this.user = null
+        this.orders = []
+        this.authError = ""
     },
 
     async startTelegramAuth() {
@@ -153,18 +152,39 @@ export default {
         this.pollAuth(code)
         },
 
-        pollAuth(code) {
+       pollAuth(code) {
+        this.authError = ""
+
+        let attempts = 0
+        const maxAttempts = 30 // ~60 сек, потому что интервал 2 сек
+
         const interval = setInterval(async () => {
+            attempts++
+
             const r = await apiFetch(`/auth/telegram/check?code=${code}`)
+            if (!r.ok) {
+            clearInterval(interval)
+            this.authError = "Ошибка проверки авторизации. Попробуйте ещё раз."
+            return
+            }
+
             const data = await r.json()
 
             if (data.status === "ok") {
             clearInterval(interval)
             setToken(data.token)
-            window.location.reload()
+
+            // вместо reload — просто переинициализируем состояние
+            this.init()
+            return
+            }
+
+            if (attempts >= maxAttempts) {
+            clearInterval(interval)
+            this.authError = "Не видим подтверждение. Откройте Telegram → нажмите Start у бота → нажмите кнопку входа ещё раз."
             }
         }, 2000)
-    }
+      }
   }
 }
 </script>
