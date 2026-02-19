@@ -499,6 +499,8 @@ def check_telegram_auth(code: str):
         db.commit()
         db.refresh(user)
 
+    user_id = user.id
+
     session.used = True
     db.commit()
     db.close()
