@@ -413,7 +413,7 @@ def get_orders(_=Depends(check_admin_key)):
     ]
 
 @app.get("/me")
-def get_me(user_id: int = Depends(get_current_user_id)):
+def get_me(user_id: int = Depends(get_user_id_from_token)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -438,7 +438,7 @@ def get_me(user_id: int = Depends(get_current_user_id)):
         db.close()
 
 @app.get("/my/orders")
-def get_my_orders(user_id: int = Depends(get_current_user_id)):
+def get_my_orders(user_id: int = Depends(get_user_id_from_token)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
