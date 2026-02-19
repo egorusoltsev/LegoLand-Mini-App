@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from auth import get_current_user_id
+from auth.jwt import get_current_user_id
 
 security = HTTPBearer()
 optional_security = HTTPBearer(auto_error=False)

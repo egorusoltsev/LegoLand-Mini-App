@@ -3,7 +3,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 from db import SessionLocal
 from models import AuthSessionModel, UserModel
-from auth import create_jwt
+from auth.jwt import create_jwt
 from auth.dependencies import get_user_id_from_token
 
 router = APIRouter()
