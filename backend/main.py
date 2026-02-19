@@ -43,9 +43,6 @@ security = HTTPBearer()
 optional_security = HTTPBearer(auto_error=False)
 PRODUCTS_FILE ="products.json"
 
-Base.metadata.create_all(bind=engine)@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(bind=engine)
 
 
 def load_products():
