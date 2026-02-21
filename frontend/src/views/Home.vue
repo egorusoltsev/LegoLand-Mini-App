@@ -200,7 +200,7 @@ export default {
         this.customerPhone = ''
         this.customerAddress = ''
 
-        window.location.href = `/track?order=${id}`
+        this.$router.push(`/track?order=${id}`)
 
       } catch (e) {
         console.error('Ошибка заказа', e)
