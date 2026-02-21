@@ -23,7 +23,7 @@
 
       <h4>Товары:</h4>
       <ul>
-        <li v-for="item in order.items" :key="item.title">
+        <li v-for="item in (order.items || [])" :key="item.title">
           {{ item.title }} × {{ item.quantity }} ({{ item.price }} ₽)
         </li>
       </ul>
@@ -48,13 +48,17 @@ export default {
     const params = new URLSearchParams(window.location.search)
     const id = params.get("order")
 
-    if (!id || id === "undefined" || id === "null") {
+    if (!id || isNaN(id)) {
         return
     }
 
     this.orderId = id
-    this.fetchOrder()
-    },
+
+    // 🔥 ВАЖНО: даём странице полностью загрузиться
+    setTimeout(() => {
+        this.fetchOrder()
+    }, 100)
+  },
 
   methods: {
     async fetchOrder() {
@@ -98,8 +102,10 @@ export default {
     },
 
     formatDate(ts) {
-      if (!ts) return "-"
-      return new Date(ts * 1000).toLocaleString()
+        if (!ts) return "-"
+        const num = Number(ts)
+        if (isNaN(num)) return "-"
+        return new Date(num * 1000).toLocaleString()
     }
   }
 }
