@@ -67,30 +67,34 @@ export default {
         this.error = ""
         this.order = null
 
-      try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 10000)
+        try {
+            const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
 
-        const res = await fetch(
-        `${API_URL}/public/orders/${this.orderId}`,
-        { signal: controller.signal }
-        )
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 8000)
 
-        clearTimeout(timeout)
+            const res = await fetch(
+            `${API_URL}/public/orders/${this.orderId}`,
+            { signal: controller.signal }
+            )
 
-        if (!res.ok) {
-          this.error = "Заказ не найден"
-          this.loading = false
-          return
+            clearTimeout(timeout)
+
+            if (!res.ok) {
+            this.error = "Заказ не найден"
+            this.loading = false
+            return
+            }
+
+            const data = await res.json()
+            this.order = data
+
+        } catch (e) {
+            console.error("Track error:", e)
+            this.error = "Ошибка соединения"
         }
 
-        this.order = await res.json()
-      } catch (e) {
-        this.error = "Ошибка соединения"
-      }
-
-      this.loading = false
+        this.loading = false
     },
 
     formatDate(ts) {
