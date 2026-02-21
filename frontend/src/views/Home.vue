@@ -140,34 +140,40 @@ export default {
     async sendOrder() {
       if (this.submitting) return
       this.submitting = true
+
       const token = getToken()
+
+      // 🚨 ЕСЛИ НЕ АВТОРИЗОВАН
       if (!token) {
         this.submitting = false
         window.location.href = "/account"
         return
-        }
-      if (!this.customerName.trim()) {
-          alert('Введите имя')
-          this.submitting = false
-          return
-        }
+      }
 
-        if (!this.customerPhone.trim()) {
-          alert('Введите телефон')
-          return
-        }
-        const order = {
-          name: this.customerName,
-          phone: this.customerPhone,
-          address: this.customerAddress,
-          items: this.cart.map(item => ({
-            id: item.id,
-            title: item.title,
-            price: item.price,
-            quantity: item.quantity
+      if (!this.customerName.trim()) {
+        alert('Введите имя')
+        this.submitting = false
+        return
+      }
+
+      if (!this.customerPhone.trim()) {
+        alert('Введите телефон')
+        this.submitting = false
+        return
+      }
+
+      const order = {
+        name: this.customerName,
+        phone: this.customerPhone,
+        address: this.customerAddress,
+        items: this.cart.map(item => ({
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity
         })),
-          total: this.totalPrice
-        } 
+        total: this.totalPrice
+      }
 
       try {
         const res = await apiFetch("/order", {
@@ -178,17 +184,14 @@ export default {
           body: JSON.stringify(order)
         })
 
+        // 🚨 если 401 — apiFetch уже редиректнул
         if (!res.ok) {
-          // если 401 — apiFetch уже редиректнул в /account
-          const txt = await res.text()
-          console.error("Order failed:", res.status, txt)
-          alert("Не удалось оформить заказ. Войдите через Telegram и попробуйте снова.")
+          alert("Не удалось оформить заказ. Войдите через Telegram.")
           this.submitting = false
           return
         }
 
         const data = await res.json()
-        console.log('Заказ отправлен:', data)
 
         const id = data.order_id
 
@@ -196,14 +199,16 @@ export default {
         this.customerName = ''
         this.customerPhone = ''
         this.customerAddress = ''
+
         window.location.href = `/track?order=${id}`
+
       } catch (e) {
         console.error('Ошибка заказа', e)
+        alert("Ошибка соединения")
       } finally {
         this.submitting = false
       }
-
-    }
+    },
   },
 
   mounted() {
