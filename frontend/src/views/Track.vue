@@ -2,31 +2,26 @@
   <div class="track">
     <h2>Проверка статуса заказа</h2>
 
-    <div v-if="!order">
-      <input
-        v-model="orderId"
-        placeholder="Введите номер заказа"
-        class="input"
-      />
-      <button @click="fetchOrder">Проверить</button>
+        <div v-if="loading">
+    Загрузка...
     </div>
 
-    <div v-if="loading">Загрузка...</div>
+    <div v-else-if="error" class="error">
+    {{ error }}
+    </div>
 
-    <div v-if="error" class="error">{{ error }}</div>
+    <div v-else-if="order" class="order-box">
+    <p><b>Номер:</b> {{ order.id }}</p>
+    <p><b>Статус:</b> {{ order.status }}</p>
+    <p><b>Дата:</b> {{ formatDate(order.created_at) }}</p>
+    <p><b>Сумма:</b> {{ order.total }} ₽</p>
 
-    <div v-if="order" class="order-box">
-      <p><b>Номер:</b> {{ order.id }}</p>
-      <p><b>Статус:</b> {{ order.status }}</p>
-      <p><b>Дата:</b> {{ formatDate(order.created_at) }}</p>
-      <p><b>Сумма:</b> {{ order.total }} ₽</p>
-
-      <h4>Товары:</h4>
-      <ul>
-        <li v-for="item in (order.items || [])" :key="item.title">
-          {{ item.title }} × {{ item.quantity }} ({{ item.price }} ₽)
+    <h4>Товары:</h4>
+    <ul>
+        <li v-for="item in (order.items || [])" :key="item.id">
+        {{ item.title }} × {{ item.quantity }} ({{ item.price }} ₽)
         </li>
-      </ul>
+    </ul>
     </div>
   </div>
 </template>
