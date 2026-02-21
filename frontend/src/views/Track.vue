@@ -45,21 +45,25 @@ export default {
   },
 
   mounted() {
-    const params = new URLSearchParams(window.location.search)
-    const id = params.get("order")
+  console.log("TRACK MOUNTED")
 
-    if (!id || isNaN(id)) {
-        return
-    }
+  const params = new URLSearchParams(window.location.search)
+  const id = params.get("order")
 
-    this.orderId = id
+  console.log("ORDER PARAM:", id)
 
-    // 🔥 ВАЖНО: даём странице полностью загрузиться
-    setTimeout(() => {
-        this.fetchOrder()
-    }, 100)
-  },
+  if (!id || isNaN(id)) {
+    console.log("INVALID ID")
+    return
+  }
 
+  this.orderId = id
+
+  setTimeout(() => {
+    console.log("CALLING FETCH")
+    this.fetchOrder()
+  }, 100)
+},
   methods: {
     async fetchOrder() {
         if (!this.orderId || isNaN(this.orderId)) {
