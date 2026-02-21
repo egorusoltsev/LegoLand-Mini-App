@@ -2,26 +2,39 @@
   <div class="track">
     <h2>Проверка статуса заказа</h2>
 
-        <div v-if="loading">
-    Загрузка...
+    <div v-if="loading">
+      Загрузка...
     </div>
 
     <div v-else-if="error" class="error">
-    {{ error }}
+      {{ error }}
     </div>
 
     <div v-else-if="order" class="order-box">
-    <p><b>Номер:</b> {{ order.id }}</p>
-    <p><b>Статус:</b> {{ order.status }}</p>
-    <p><b>Дата:</b> {{ formatDate(order.created_at) }}</p>
-    <p><b>Сумма:</b> {{ order.total }} ₽</p>
+      <p><b>Номер:</b> {{ order.id }}</p>
+      <p><b>Статус:</b> {{ order.status }}</p>
+      <p><b>Дата:</b> {{ formatDate(order.created_at) }}</p>
+      <p><b>Сумма:</b> {{ order.total }} ₽</p>
 
-    <h4>Товары:</h4>
-    <ul>
-        <li v-for="item in (order.items || [])" :key="item.id">
-        {{ item.title }} × {{ item.quantity }} ({{ item.price }} ₽)
+      <h4>Товары:</h4>
+      <ul>
+        <li v-for="(item, idx) in (order.items || [])" :key="item.id || idx">
+          {{ item.title }} × {{ item.quantity }} ({{ item.price }} ₽)
         </li>
-    </ul>
+      </ul>
+
+      <div style="margin-top:12px;">
+        <button @click="order=null">Проверить другой заказ</button>
+      </div>
+    </div>
+
+    <div v-else>
+      <input
+        v-model="orderId"
+        placeholder="Введите номер заказа"
+        class="input"
+      />
+      <button @click="fetchOrder">Проверить</button>
     </div>
   </div>
 </template>
@@ -40,71 +53,79 @@ export default {
   },
 
   mounted() {
-  console.log("TRACK MOUNTED")
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get("order")
 
-  const params = new URLSearchParams(window.location.search)
-  const id = params.get("order")
+    // защита от мусора
+    if (id && id !== "undefined" && id !== "null") {
+      this.orderId = id
+      // небольшой "отступ" для моб.вебвью
+      setTimeout(() => this.fetchOrder(), 50)
+    }
+  },
 
-  console.log("ORDER PARAM:", id)
-
-  if (!id || isNaN(id)) {
-    console.log("INVALID ID")
-    return
-  }
-
-  this.orderId = id
-
-  setTimeout(() => {
-    console.log("CALLING FETCH")
-    this.fetchOrder()
-  }, 100)
-},
   methods: {
     async fetchOrder() {
-        if (!this.orderId || isNaN(this.orderId)) {
-            this.error = "Некорректный номер заказа"
-            return
+      const raw = String(this.orderId || "").trim()
+
+      if (!raw) {
+        this.error = "Введите номер заказа"
+        return
+      }
+      if (isNaN(Number(raw))) {
+        this.error = "Некорректный номер заказа"
+        return
+      }
+
+      this.loading = true
+      this.error = ""
+      this.order = null
+
+      const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "")
+      const url = `${API_URL}/public/orders/${encodeURIComponent(raw)}`
+
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 8000)
+
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          signal: controller.signal,
+          // важно для некоторых моб.вебвью
+          cache: "no-store",
+        })
+
+        if (!res.ok) {
+          this.error = `Заказ не найден (HTTP ${res.status})`
+          return
         }
 
-        this.loading = true
-        this.error = ""
-        this.order = null
+        const data = await res.json()
 
-        try {
-            const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-
-            const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 8000)
-
-            const res = await fetch(
-            `${API_URL}/public/orders/${this.orderId}`,
-            { signal: controller.signal }
-            )
-
-            clearTimeout(timeout)
-
-            if (!res.ok) {
-            this.error = "Заказ не найден"
-            this.loading = false
-            return
-            }
-
-            const data = await res.json()
-            this.order = data
-
-        } catch (e) {
-            console.error("Track error:", e)
-            this.error = "Ошибка соединения"
+        // защита если бек внезапно вернул не то
+        if (!data || !data.id) {
+          this.error = "Сервер вернул некорректный ответ"
+          return
         }
 
+        this.order = data
+      } catch (e) {
+        // если вебвью/сеть/CORS — сюда
+        if (String(e).includes("AbortError")) {
+          this.error = "Сервер долго отвечает. Попробуйте ещё раз."
+        } else {
+          this.error = "Ошибка соединения (возможно, блокируется в браузере/вебвью)"
+        }
+      } finally {
+        clearTimeout(timeout)
         this.loading = false
+      }
     },
 
     formatDate(ts) {
-        if (!ts) return "-"
-        const num = Number(ts)
-        if (isNaN(num)) return "-"
-        return new Date(num * 1000).toLocaleString()
+      const n = Number(ts)
+      if (!n || isNaN(n)) return "-"
+      return new Date(n * 1000).toLocaleString()
     }
   }
 }
