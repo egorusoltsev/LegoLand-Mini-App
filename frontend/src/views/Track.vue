@@ -47,23 +47,37 @@ export default {
   mounted() {
     const params = new URLSearchParams(window.location.search)
     const id = params.get("order")
-    if (id) {
-      this.orderId = id
-      this.fetchOrder()
+
+    if (!id || id === "undefined" || id === "null") {
+        return
     }
-  },
+
+    this.orderId = id
+    this.fetchOrder()
+    },
 
   methods: {
     async fetchOrder() {
-      if (!this.orderId) return
+        if (!this.orderId || isNaN(this.orderId)) {
+            this.error = "Некорректный номер заказа"
+            return
+        }
 
-      this.loading = true
-      this.error = ""
-      this.order = null
+        this.loading = true
+        this.error = ""
+        this.order = null
 
       try {
         const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const res = await fetch(`${API_URL}/public/orders/${this.orderId}`)
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10000)
+
+        const res = await fetch(
+        `${API_URL}/public/orders/${this.orderId}`,
+        { signal: controller.signal }
+        )
+
+        clearTimeout(timeout)
 
         if (!res.ok) {
           this.error = "Заказ не найден"
