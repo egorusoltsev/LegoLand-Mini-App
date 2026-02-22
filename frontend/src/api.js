@@ -1,7 +1,11 @@
 import { getToken, clearToken } from './authToken'
 
-const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
+const RAW_API_URL = import.meta.env.VITE_API_URL || ""
+const API_URL = RAW_API_URL.replace(/\/$/, "")
 
+if (!API_URL) {
+  console.error("VITE_API_URL is empty. Set it in Vercel env and rebuild.")
+}
 export async function apiFetch(path, options = {}) {
   const token = getToken()
 

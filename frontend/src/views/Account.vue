@@ -114,8 +114,8 @@ export default {
 
       if (!this.user && startAuth === "1" && !this.autoAuthStarted) {
         this.autoAuthStarted = true
-        // авто-старт: создаём code, пробуем открыть TG, запускаем polling
-        await this.startTelegramAuth(true)
+        // ⚠️ В авто-режиме НЕ открываем Telegram сами (иначе мобилка может падать)
+        await this.startTelegramAuth(false)
       }
     },
 
