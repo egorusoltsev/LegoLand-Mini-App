@@ -48,7 +48,11 @@
             <div><b>Сумма:</b> {{ order.total }} ₽</div>
             <div><b>Дата:</b> {{ formatDate(order.created_at) }}</div>
             <div>
-              <a :href="`/track?order=${order.id}`">Открыть трекинг</a>
+              <router-link 
+              :to="{ path: '/track', query: { order: order.id } }"
+              >
+              Открыть трекинг
+              </router-link>
             </div>
           </div>
         </div>
@@ -143,10 +147,7 @@ export default {
         const code = data.code
 
         // открываем бота
-        window.open(
-            `https://t.me/legoland_orders_bot?start=web_${code}`,
-            "_blank"
-        )
+       window.location.href = `https://t.me/${this.botUsername}?start=web_${code}`
 
         // начинаем polling
         this.pollAuth(code)

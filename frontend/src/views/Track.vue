@@ -60,8 +60,7 @@ export default {
         this.$router.replace("/account")
         return
         }
-    const params = new URLSearchParams(window.location.search)
-    const id = params.get("order")
+    const id = this.$route.query.order
     if (id) {
         this.orderId = id
         this.fetchOrder()
