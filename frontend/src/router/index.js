@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import Admin from '../views/Admin.vue'
 import Track from '../views/Track.vue'
 import Account from "../views/Account.vue"
+import { getToken } from '../authToken'
 
 const routes = [
   { path: '/', component: Home },
@@ -20,7 +21,23 @@ const routes = [
 
 ]
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// 🔐 Глобальная защита роутов
+router.beforeEach((to, from, next) => {
+  const token = getToken()
+
+  // какие страницы требуют авторизации
+  const protectedRoutes = ['/track', '/admin']
+
+  if (protectedRoutes.includes(to.path) && !token) {
+    return next('/account')
+  }
+
+  next()
+})
+
+export default router

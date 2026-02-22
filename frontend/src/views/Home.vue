@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <Header />
-  <a href="/account">Аккаунт</a>
+    <router-link to="/account">Аккаунт</router-link>
     <main class="content">
       <h2>Каталог</h2>
       <div v-if="loading">Загрузка товаров...</div>
@@ -200,8 +200,8 @@ export default {
         this.customerPhone = ''
         this.customerAddress = ''
 
-        this.$router.push(`/track?order=${id}`)
-
+        localStorage.setItem("last_order_id", id)
+        this.$router.push("/account")
       } catch (e) {
         console.error('Ошибка заказа', e)
         alert("Ошибка соединения")

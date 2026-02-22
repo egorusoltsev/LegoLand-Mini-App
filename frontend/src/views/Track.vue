@@ -40,6 +40,8 @@
 </template>
 
 <script>
+import { getToken } from "../authToken"
+
 export default {
   name: "Track",
 
@@ -53,6 +55,11 @@ export default {
   },
 
   mounted() {
+    const token = getToken()
+        if (!token) {
+        this.$router.replace("/account")
+        return
+        }
     const params = new URLSearchParams(window.location.search)
     const id = params.get("order")
 
