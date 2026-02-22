@@ -75,7 +75,7 @@ export default {
       orders: [],
       ordersLoading: false,
       authError: "",
-      botUsername: import.meta.env.VITE_TG_BOT_USERNAME
+      botUsername: (import.meta.env.VITE_TG_BOT_USERNAME || "").replace(/^@/, "")
     }
   },
 
@@ -134,9 +134,21 @@ export default {
     },
 
     async startTelegramAuth() {
-        const r = await apiFetch("/auth/telegram/init", {
+        if (!this.botUsername) {
+            this.authError = "Не настроен Telegram-бот. Добавьте VITE_TG_BOT_USERNAME в переменные окружения фронтенда."
+            return
+        }
+
+        let r
+        try {
+          r = await apiFetch("/auth/telegram/init", {
             method: "POST"
-        })
+          })
+        } catch (e) {
+          console.error("Ошибка запуска Telegram-авторизации", e)
+          this.authError = "Не удалось запустить авторизацию. Проверьте соединение и попробуйте снова."
+          return
+        }
 
         if (!r.ok) {
             alert("Ошибка запуска авторизации")
@@ -146,8 +158,18 @@ export default {
         const data = await r.json()
         const code = data.code
 
-        // открываем бота
-       window.location.href = `https://t.me/${this.botUsername}?start=web_${code}`
+        const telegramUrl = `https://t.me/${this.botUsername}?start=web_${code}`
+
+        // На мобильных безопаснее открывать бота в новой вкладке/приложении,
+        // иначе внутри webview можно получить белый экран.
+        if (window.Telegram?.WebApp?.openTelegramLink) {
+          window.Telegram.WebApp.openTelegramLink(telegramUrl)
+        } else {
+          const openedWindow = window.open(telegramUrl, "_blank", "noopener,noreferrer")
+          if (!openedWindow) {
+            window.location.href = telegramUrl
+          }
+        }
 
         // начинаем polling
         this.pollAuth(code)
@@ -162,7 +184,15 @@ export default {
         const interval = setInterval(async () => {
             attempts++
 
-            const r = await apiFetch(`/auth/telegram/check?code=${code}`)
+            let r
+            try {
+              r = await apiFetch(`/auth/telegram/check?code=${code}`)
+            } catch (e) {
+              clearInterval(interval)
+              console.error("Ошибка polling авторизации", e)
+              this.authError = "Проблема с соединением при проверке входа."
+              return
+            }
             if (!r.ok) {
             clearInterval(interval)
             this.authError = "Ошибка проверки авторизации. Попробуйте ещё раз."
