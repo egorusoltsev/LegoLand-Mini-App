@@ -145,7 +145,7 @@ export default {
       // 🚨 ЕСЛИ НЕ АВТОРИЗОВАН
       if (!token) {
         this.submitting = false
-        this.$router.push("/account")
+        this.$router.push({ path: "/account", query: { startAuth: "1", from: "checkout" } })
         return
       }
 
@@ -183,7 +183,7 @@ export default {
           body: JSON.stringify(order)
         })
 
-        // 🚨 если 401 — apiFetch уже редиректнул
+        // 🚨 если 401 — токен очищен, ведём пользователя в авторизацию
         if (!res.ok) {
           alert("Не удалось оформить заказ. Войдите через Telegram.")
           this.submitting = false
@@ -200,7 +200,7 @@ export default {
         this.customerAddress = ''
 
         localStorage.setItem("last_order_id", id)
-        this.$router.push("/account")
+        this.$router.push({ path: "/account", query: { startAuth: "1", from: "checkout" } })
       } catch (e) {
         console.error('Ошибка заказа', e)
         alert("Ошибка соединения")
