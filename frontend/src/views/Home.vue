@@ -116,8 +116,7 @@ export default {
     },
     async fetchProducts() {
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const res = await fetch(`${API_URL}/products`)
+        const res = await apiFetch("/products")
         this.products = await res.json()
       } catch (e) {
         console.error('Ошибка загрузки товаров', e)
@@ -146,7 +145,7 @@ export default {
       // 🚨 ЕСЛИ НЕ АВТОРИЗОВАН
       if (!token) {
         this.submitting = false
-        window.location.href = "/account"
+        this.$router.push("/account")
         return
       }
 

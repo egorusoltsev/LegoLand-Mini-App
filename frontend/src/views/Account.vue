@@ -174,9 +174,8 @@ export default {
             clearInterval(interval)
             setToken(data.token)
 
-            // вместо reload — просто переинициализируем состояние
-            this.init()
-            return
+           await this.loadMe()
+           if (this.user) await this.loadOrders()
             }
 
             if (attempts >= maxAttempts) {

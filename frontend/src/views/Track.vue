@@ -62,12 +62,9 @@ export default {
         }
     const params = new URLSearchParams(window.location.search)
     const id = params.get("order")
-
-    // защита от мусора
-    if (id && id !== "undefined" && id !== "null") {
-      this.orderId = id
-      // небольшой "отступ" для моб.вебвью
-      setTimeout(() => this.fetchOrder(), 50)
+    if (id) {
+        this.orderId = id
+        this.fetchOrder()
     }
   },
 

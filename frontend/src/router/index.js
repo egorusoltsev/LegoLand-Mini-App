@@ -31,7 +31,7 @@ router.beforeEach((to, from, next) => {
   const token = getToken()
 
   // какие страницы требуют авторизации
-  const protectedRoutes = ['/track', '/admin']
+  const protectedRoutes = ['/track']
 
   if (protectedRoutes.includes(to.path) && !token) {
     return next('/account')
