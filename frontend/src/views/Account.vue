@@ -70,6 +70,7 @@
 import { setToken, getToken, clearToken } from "../authToken"
 import { apiFetch } from "../api"
 
+console.log("ACCOUNT FILE LOADED")
 export default {
   name: "Account",
 
@@ -88,7 +89,14 @@ export default {
   },
 
   mounted() {
-    this.init()
+    console.log("ACCOUNT MOUNTED")
+
+    try {
+        this.init()
+    } catch (e) {
+        alert("INIT ERROR: " + e)
+        console.error(e)
+    }
   },
 
   beforeUnmount() {
@@ -97,26 +105,26 @@ export default {
 
   methods: {
     async init() {
-      const token = getToken()
+        try {
+            const token = getToken()
 
-      if (token) {
-        await this.loadMe()
-        if (this.user) {
-          await this.loadOrders()
+            if (token) {
+            await this.loadMe()
+            if (this.user) {
+                await this.loadOrders()
+            }
+            }
+
+            this.loading = false
+
+            if (!this.user && this.$route?.query?.startAuth === "1" && !this.autoAuthStarted) {
+            this.autoAuthStarted = true
+            await this.startTelegramAuth()
+            }
+        } catch (e) {
+            alert("INIT CRASH: " + e)
+            console.error(e)
         }
-      }
-
-      this.loading = false
-
-      // ❗ без optional chaining
-      const q = (this.$route && this.$route.query) ? this.$route.query : {}
-      const startAuth = q && q.startAuth ? String(q.startAuth) : ""
-
-      if (!this.user && startAuth === "1" && !this.autoAuthStarted) {
-        this.autoAuthStarted = true
-        // ⚠️ В авто-режиме НЕ открываем Telegram сами (иначе мобилка может падать)
-        await this.startTelegramAuth(false)
-      }
     },
 
     async loadMe() {
