@@ -1,3 +1,6 @@
+import { installDebugOverlay } from "./debugOverlay"
+installDebugOverlay()
+
 window.addEventListener("error", (e) => {
   document.body.innerHTML =
     "<pre style='white-space:pre-wrap;padding:20px;font-size:14px;color:red'>" +
