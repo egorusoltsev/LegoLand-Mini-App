@@ -1,14 +1,18 @@
 // src/debugOverlay.js
 export function installDebugOverlay() {
-  // Показывать только если включён флаг ?debug=1
+  // debug=1 может быть и в search, и внутри hash (из-за hash-router)
   var enabled = false;
+
   try {
-    enabled = (window.location.search || "").indexOf("debug=1") !== -1;
+    var search = String(window.location.search || "");
+    var hash = String(window.location.hash || "");
+    enabled = (search.indexOf("debug=1") !== -1) || (hash.indexOf("debug=1") !== -1);
   } catch (e) {}
 
   if (!enabled) return;
 
   function show(text) {
+    console.log("[DEBUG OVERLAY]", text);
     try {
       var el = document.getElementById("__debug_overlay__");
       if (!el) {
