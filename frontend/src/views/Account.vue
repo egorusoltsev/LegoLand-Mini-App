@@ -90,13 +90,10 @@ export default {
 
   mounted() {
     console.log("ACCOUNT MOUNTED")
-
-    try {
-        this.init()
-    } catch (e) {
-        alert("INIT ERROR: " + e)
+    this.init().catch((e) => {
+        alert("INIT CRASH (outer): " + e)
         console.error(e)
-    }
+    })
   },
 
   beforeUnmount() {
@@ -117,9 +114,10 @@ export default {
 
             this.loading = false
 
-            if (!this.user && this.$route?.query?.startAuth === "1" && !this.autoAuthStarted) {
+            var q = (this.$route && this.$route.query) ? this.$route.query : {}
+            if (!this.user && q.startAuth === "1" && !this.autoAuthStarted) {
             this.autoAuthStarted = true
-            await this.startTelegramAuth()
+            await this.startTelegramAuth(false) // ВАЖНО: без auto-open
             }
         } catch (e) {
             alert("INIT CRASH: " + e)
