@@ -1,13 +1,22 @@
-const KEY = 'AUTH_TOKEN'
-
-export function setToken(token) {
-  localStorage.setItem(KEY, token)
-}
+const KEY = "token"
 
 export function getToken() {
-  return localStorage.getItem(KEY)
+  try {
+    return localStorage.getItem(KEY) || ""
+  } catch (e) {
+    // Telegram WebView иногда кидает SecurityError
+    return ""
+  }
+}
+
+export function setToken(token) {
+  try {
+    localStorage.setItem(KEY, token)
+  } catch (e) {}
 }
 
 export function clearToken() {
-  localStorage.removeItem(KEY)
+  try {
+    localStorage.removeItem(KEY)
+  } catch (e) {}
 }
