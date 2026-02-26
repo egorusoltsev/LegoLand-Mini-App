@@ -256,7 +256,8 @@ export default {
     },
 
     onFileChange(e) {
-      this.selectedFile = e.target.files?.[0] || null
+      const files = e && e.target ? e.target.files : null
+      this.selectedFile = files && files[0] ? files[0] : null
     },
 
     async uploadImage() {
