@@ -1,16 +1,12 @@
 <template>
-  <div class="track">
-    <h2>Проверка статуса заказа</h2>
+  <div class="container track-page">
+    <h2 class="section-title">Проверка статуса заказа</h2>
 
-    <div v-if="loading">
-      Загрузка...
-    </div>
+    <div v-if="loading" class="surface-card box">Загрузка...</div>
 
-    <div v-else-if="error" class="error">
-      {{ error }}
-    </div>
+    <div v-else-if="error" class="error">{{ error }}</div>
 
-    <div v-else-if="order" class="order-box">
+    <div v-else-if="order" class="surface-card box">
       <p><b>Номер:</b> {{ order.id }}</p>
       <p><b>Статус:</b> {{ order.status }}</p>
       <p><b>Дата:</b> {{ formatDate(order.created_at) }}</p>
@@ -23,101 +19,92 @@
         </li>
       </ul>
 
-      <div style="margin-top:12px;">
-        <button @click="order=null">Проверить другой заказ</button>
-      </div>
+      <button class="btn-secondary" @click="order = null">Проверить другой заказ</button>
     </div>
 
-    <div v-else>
-      <input
-        v-model="orderId"
-        placeholder="Введите номер заказа"
-        class="input"
-      />
-      <button @click="fetchOrder">Проверить</button>
+    <div v-else class="surface-card box checker">
+      <input v-model="orderId" placeholder="Введите номер заказа" class="input" />
+      <button class="btn-primary" @click="fetchOrder">Проверить</button>
     </div>
   </div>
 </template>
 
 <script>
-import { getToken } from "../authToken"
+import { getToken } from '../authToken'
 
 export default {
-  name: "Track",
+  name: 'Track',
 
   data() {
     return {
-      orderId: "",
+      orderId: '',
       order: null,
       loading: false,
-      error: ""
+      error: ''
     }
   },
 
   mounted() {
     const token = getToken()
-        if (!token) {
-        this.$router.replace("/account")
-        return
-        }
+    if (!token) {
+      this.$router.replace('/account')
+      return
+    }
     const id = this.$route.query.order
     if (id) {
-        this.orderId = id
-        this.fetchOrder()
+      this.orderId = id
+      this.fetchOrder()
     }
   },
 
   methods: {
     async fetchOrder() {
-      const raw = String(this.orderId || "").trim()
+      const raw = String(this.orderId || '').trim()
 
       if (!raw) {
-        this.error = "Введите номер заказа"
+        this.error = 'Введите номер заказа'
         return
       }
       if (isNaN(Number(raw))) {
-        this.error = "Некорректный номер заказа"
+        this.error = 'Некорректный номер заказа'
         return
       }
 
       this.loading = true
-      this.error = ""
+      this.error = ''
       this.order = null
 
-      const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "")
-      const url = `${API_URL}/public/orders/${encodeURIComponent(raw)}`
+      const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+      const url = API_URL + '/public/orders/' + encodeURIComponent(raw)
 
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 8000)
+      const timeout = setTimeout(function () { controller.abort() }, 8000)
 
       try {
         const res = await fetch(url, {
-          method: "GET",
+          method: 'GET',
           signal: controller.signal,
-          // важно для некоторых моб.вебвью
-          cache: "no-store",
+          cache: 'no-store'
         })
 
         if (!res.ok) {
-          this.error = `Заказ не найден (HTTP ${res.status})`
+          this.error = 'Заказ не найден (HTTP ' + res.status + ')'
           return
         }
 
         const data = await res.json()
 
-        // защита если бек внезапно вернул не то
         if (!data || !data.id) {
-          this.error = "Сервер вернул некорректный ответ"
+          this.error = 'Сервер вернул некорректный ответ'
           return
         }
 
         this.order = data
       } catch (e) {
-        // если вебвью/сеть/CORS — сюда
-        if (String(e).includes("AbortError")) {
-          this.error = "Сервер долго отвечает. Попробуйте ещё раз."
+        if (String(e).includes('AbortError')) {
+          this.error = 'Сервер долго отвечает. Попробуйте ещё раз.'
         } else {
-          this.error = "Ошибка соединения (возможно, блокируется в браузере/вебвью)"
+          this.error = 'Ошибка соединения (возможно, блокируется в браузере/вебвью)'
         }
       } finally {
         clearTimeout(timeout)
@@ -127,31 +114,19 @@ export default {
 
     formatDate(ts) {
       const n = Number(ts)
-      if (!n || isNaN(n)) return "-"
+      if (!n || isNaN(n)) return '-'
       return new Date(n * 1000).toLocaleString()
     }
   }
 }
 </script>
 
-<style>
-.track {
-  padding: 20px;
-}
-
-.input {
-  padding: 8px;
-  margin-right: 8px;
-}
-
-.order-box {
-  margin-top: 20px;
-  border: 1px solid #ccc;
-  padding: 15px;
-}
-
-.error {
-  color: red;
-  margin-top: 10px;
+<style scoped>
+.track-page { padding-top: 24px; }
+.box { padding: 16px; }
+.checker { display: flex; gap: 10px; }
+.error { color: #b00020; }
+@media (max-width: 680px) {
+  .checker { flex-direction: column; }
 }
 </style>
