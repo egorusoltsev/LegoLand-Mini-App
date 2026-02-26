@@ -1,7 +1,7 @@
 <template>
   <header class="site-header">
     <div class="container header-row">
-      <router-link to="/" class="brand" aria-label="LEGOland">
+      <router-link to="/" class="brand" aria-label="LegoLand">
         <LogoText />
       </router-link>
 
