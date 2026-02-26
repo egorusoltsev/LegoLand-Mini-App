@@ -1,63 +1,37 @@
 <template>
-  <div class="account">
-    <h2>Аккаунт</h2>
+  <div class="container account-page">
+    <h2 class="section-title">Аккаунт</h2>
 
-    <div v-if="loading">
-      Загрузка...
-    </div>
+    <div v-if="loading" class="surface-card state-card">Загрузка...</div>
 
     <div v-else>
-      <div v-if="fatalError" style="margin:10px 0; color:#b00020;">
-        {{ fatalError }}
-      </div>
+      <div v-if="fatalError" class="error">{{ fatalError }}</div>
 
-      <!-- НЕ ЗАЛОГИНЕН -->
-      <div v-if="!user">
+      <div v-if="!user" class="surface-card state-card">
         <p>Чтобы оформить заказ, войдите через Telegram.</p>
-        <button @click="startTelegramAuth">
-          Войти через Telegram
-        </button>
-        <p v-if="authError" style="margin-top:10px; color:#b00020;">
-          {{ authError }}
-        </p>
+        <button class="btn-primary" @click="startTelegramAuth">Войти через Telegram</button>
+        <p v-if="authError" class="error">{{ authError }}</p>
       </div>
 
-      <!-- ЗАЛОГИНЕН -->
       <div v-else>
-        <p>
-          <strong>Привет, {{ user.first_name || user.username }} 👋</strong>
-        </p>
-
-        <button @click="logout">Выйти</button>
-
-        <h3 style="margin-top:20px;">Мои заказы</h3>
-
-        <div v-if="ordersLoading">
-          Загрузка заказов...
+        <div class="surface-card state-card">
+          <p><strong>Привет, {{ user.first_name || user.username }} 👋</strong></p>
+          <button class="btn-secondary" @click="logout">Выйти</button>
         </div>
 
-        <div v-else-if="orders.length === 0">
-          У вас пока нет заказов.
-        </div>
+        <h3 class="orders-title">Мои заказы</h3>
 
-        <div v-else>
-          <div
-            v-for="order in orders"
-            :key="order.id"
-            style="border:1px solid #ddd; padding:10px; margin:10px 0; border-radius:10px;"
-          >
+        <div v-if="ordersLoading" class="surface-card state-card">Загрузка заказов...</div>
+        <div v-else-if="orders.length === 0" class="surface-card state-card">У вас пока нет заказов.</div>
+
+        <div v-else class="orders-list">
+          <article v-for="order in orders" :key="order.id" class="surface-card order-card">
             <div><b>ID:</b> {{ order.id }}</div>
             <div><b>Статус:</b> {{ order.status }}</div>
             <div><b>Сумма:</b> {{ order.total }} ₽</div>
             <div><b>Дата:</b> {{ formatDate(order.created_at) }}</div>
-            <div>
-              <router-link
-                :to="{ path: '/track', query: { order: order.id } }"
-              >
-                Открыть трекинг
-              </router-link>
-            </div>
-          </div>
+            <router-link :to="{ path: '/track', query: { order: order.id } }" class="pill">Открыть трекинг</router-link>
+          </article>
         </div>
       </div>
     </div>
@@ -222,39 +196,46 @@ export default {
 
         if (!r.ok) {
           clearInterval(interval)
-          this.authError = 'Ошибка проверки авторизации. Попробуйте ещё раз.'
+          this.authError = 'Ошибка проверки авторизации.'
           return
         }
 
-        try {
-          const data = await r.json()
+        const data = await r.json()
 
-          if (data.status === 'ok') {
+        if (data.status === 'pending') {
+          if (attempts >= maxAttempts) {
             clearInterval(interval)
-            setToken(data.token)
-
-            await this.loadMe()
-            if (this.user) {
-              await this.loadOrders()
-            }
+            this.authError = 'Время ожидания истекло. Нажмите «Войти через Telegram» ещё раз.'
           }
-        } catch (e) {
-          clearInterval(interval)
-          console.error('Ошибка чтения ответа авторизации', e)
-          this.authError = 'Получен некорректный ответ сервера при входе.'
           return
         }
 
-        if (attempts >= maxAttempts) {
-          clearInterval(interval)
-          this.authError = 'Не видим подтверждение. Откройте Telegram → нажмите Start у бота → нажмите кнопку входа ещё раз.'
+        clearInterval(interval)
+
+        if (data.status === 'ok' && data.token) {
+          setToken(data.token)
+          this.loading = true
+          await this.safeInit()
+        } else {
+          this.authError = 'Авторизация не завершена.'
         }
-      }, 2000)
+      }, 2500)
     },
 
     formatDate(ts) {
-      return new Date(ts * 1000).toLocaleString()
+      const n = Number(ts)
+      if (!n || isNaN(n)) return '-'
+      return new Date(n * 1000).toLocaleString()
     }
   }
 }
 </script>
+
+<style scoped>
+.account-page { padding-top: 24px; padding-bottom: 30px; }
+.state-card { padding: 16px; }
+.error { margin: 10px 0; color: #b00020; }
+.orders-title { margin: 20px 0 12px; }
+.orders-list { display: grid; gap: 10px; }
+.order-card { padding: 14px; display: grid; gap: 6px; }
+</style>

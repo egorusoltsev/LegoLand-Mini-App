@@ -1,15 +1,15 @@
 <template>
-  <div class="admin">
-    <h2>Админка</h2>
+  <div class="container admin">
+    <h2 class="section-title">Админка</h2>
 
-    <div v-if="!adminKey" class="login-box">
+    <div v-if="!adminKey" class="login-box surface-card">
         <p>Введите ключ админа:</p>
-        <input v-model="adminKeyInput" placeholder="Admin key" />
-        <button @click="login">Войти</button>
+        <input v-model="adminKeyInput" placeholder="Admin key" class="input" />
+        <button class="btn-primary" @click="login">Войти</button>
     </div>
 
     <div v-else>
-        <button class="logout" @click="logout">Выйти</button>
+        <button class="btn-secondary logout" @click="logout">Выйти</button>
 
         <!-- ДАЛЬШЕ ОСТАВЛЯЕШЬ ТВОЙ ТЕКУЩИЙ КОД АДМИНКИ: заказы/товары/кнопки -->
         <!-- то есть твой v-for orders/products, формы добавления и т.д. -->
@@ -22,7 +22,8 @@
     <input v-model="newTitle" class="input" placeholder="Название" />
     <input v-model.number="newPrice" class="input" type="number" placeholder="Цена" />
     <input v-model="newImage" class="input" placeholder="image (например xwing.jpg)" />
-    <button 
+    <button
+      class="btn-primary"
       @click="addProduct"
       :disabled="!newTitle.trim() || !newImage"
     >
@@ -30,14 +31,14 @@
     </button>
 
     <input type="file" @change="onFileChange" />
-    <button @click="uploadImage">Загрузить фото</button>
+    <button class="btn-secondary" @click="uploadImage">Загрузить фото</button>
     </div>
 
     <div v-if="products.length === 0">Товаров пока нет</div>
 
     <div v-for="p in products" :key="p.id" class="product-row">
     <span>#{{ p.id }} — {{ p.title }} — {{ p.price }} ₽ — {{ p.image }}</span>
-    <button @click="deleteProduct(p.id)">Удалить</button>
+    <button class="btn-secondary" @click="deleteProduct(p.id)">Удалить</button>
     </div>
 
     <hr />
@@ -72,10 +73,10 @@
           <b>Дата:</b> {{ formatDate(order.created_at) }}
         </p>
         <div class="status-buttons" v-if="order.id">
-          <button @click="setStatus(order.id, 'new')">new</button>
-          <button @click="setStatus(order.id, 'confirmed')">confirmed</button>
-          <button @click="setStatus(order.id, 'shipped')">shipped</button>
-          <button @click="setStatus(order.id, 'done')">done</button>
+          <button class="btn-secondary" @click="setStatus(order.id, 'new')">new</button>
+          <button class="btn-secondary" @click="setStatus(order.id, 'confirmed')">confirmed</button>
+          <button class="btn-secondary" @click="setStatus(order.id, 'shipped')">shipped</button>
+          <button class="btn-secondary" @click="setStatus(order.id, 'done')">done</button>
         </div>
       </div>
     </div>
@@ -357,11 +358,20 @@ export default {
 
 <style>
 .admin {
-  padding: 20px;
+  padding-top: 24px;
+  padding-bottom: 28px;
+}
+
+.login-box {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
 }
 
 .order-card {
-  border: 1px solid #ccc;
+  border: 1px solid #ececec;
+  border-radius: 16px;
+  background: #fff;
   padding: 12px;
   margin-bottom: 16px;
 }
@@ -396,6 +406,8 @@ export default {
   gap: 12px;
   padding: 8px;
   border: 1px solid #eee;
+  border-radius: 12px;
+  background: #fff;
   margin-bottom: 6px;
 }
 
@@ -413,4 +425,3 @@ button:disabled {
 }
 
 </style>
-
