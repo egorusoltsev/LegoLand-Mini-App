@@ -6,6 +6,43 @@
       <h2>Каталог</h2>
       <div v-if="loading">Загрузка товаров...</div>
       <div class="catalog">
+              <section class="why">
+        <h3 class="why-title">Почему LEGOland?</h3>
+
+        <div class="why-grid">
+          <div class="why-item">
+            <div class="why-emoji">🚚</div>
+            <div>
+              <div class="why-name">Быстрая отправка</div>
+              <div class="why-text">Сроки зависят от города поставки.</div>
+            </div>
+          </div>
+
+          <div class="why-item">
+            <div class="why-emoji">💰</div>
+            <div>
+              <div class="why-name">Цены ниже рынка</div>
+              <div class="why-text">Стараемся держать цену ниже маркетплейсов.</div>
+            </div>
+          </div>
+
+          <div class="why-item">
+            <div class="why-emoji">📦</div>
+            <div>
+              <div class="why-name">Проверка перед отправкой</div>
+              <div class="why-text">Проверяем комплектность и состояние коробки.</div>
+            </div>
+          </div>
+
+          <div class="why-item">
+            <div class="why-emoji">🛡</div>
+            <div>
+              <div class="why-name">На связи в Telegram</div>
+              <div class="why-text">Поддержка и статус заказа — прямо в Telegram.</div>
+            </div>
+          </div>
+        </div>
+      </section>
         <ProductCard
           v-for="product in products"
           :key="product.id"
@@ -145,7 +182,7 @@ export default {
       // 🚨 ЕСЛИ НЕ АВТОРИЗОВАН
       if (!token) {
         this.submitting = false
-        this.$router.push("/account")
+        this.$router.push({ path: "/account", query: { startAuth: "1", from: "checkout" } })
         return
       }
 
@@ -183,7 +220,7 @@ export default {
           body: JSON.stringify(order)
         })
 
-        // 🚨 если 401 — apiFetch уже редиректнул
+        // 🚨 если 401 — токен очищен, ведём пользователя в авторизацию
         if (!res.ok) {
           alert("Не удалось оформить заказ. Войдите через Telegram.")
           this.submitting = false
@@ -200,7 +237,7 @@ export default {
         this.customerAddress = ''
 
         localStorage.setItem("last_order_id", id)
-        this.$router.push("/account")
+        this.$router.push({ path: "/account", query: { startAuth: "1", from: "checkout" } })
       } catch (e) {
         console.error('Ошибка заказа', e)
         alert("Ошибка соединения")
@@ -270,5 +307,58 @@ export default {
   margin-top: 6px;
   border: 1px solid #ccc;
   border-radius: 6px;
+}
+
+.why {
+  margin: 18px 0 16px;
+  padding: 14px;
+  border: 1px solid #e7e7e7;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.why-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.why-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.why-emoji {
+  font-size: 20px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.why-name {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.why-text {
+  font-size: 13px;
+  color: #555;
+}
+
+/* Чуть красивее на широких экранах */
+@media (min-width: 700px) {
+  .why-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

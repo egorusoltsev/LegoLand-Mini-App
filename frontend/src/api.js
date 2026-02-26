@@ -1,7 +1,11 @@
 import { getToken, clearToken } from './authToken'
 
-const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
+const RAW_API_URL = import.meta.env.VITE_API_URL || ""
+const API_URL = RAW_API_URL.replace(/\/$/, "")
 
+if (!API_URL) {
+  console.error("VITE_API_URL is empty. Set it in Vercel env and rebuild.")
+}
 export async function apiFetch(path, options = {}) {
   const token = getToken()
 
@@ -18,12 +22,10 @@ export async function apiFetch(path, options = {}) {
     headers
   })
 
-  // 👇 важная штука: если токен невалиден / нет токена на защищённом роуте
+  // Если токен невалиден, просто очищаем его.
+  // Навигацию не делаем здесь, чтобы избежать циклов/белого экрана в webview.
   if (res.status === 401) {
     clearToken()
-    // отправляем в аккаунт (там кнопка входа)
-    window.location.href = "/account"
-    return res
   }
 
   return res
