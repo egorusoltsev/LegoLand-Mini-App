@@ -19,12 +19,12 @@
         </li>
       </ul>
 
-      <button class="btn-secondary" @click="order = null">Проверить другой заказ</button>
+      <button class="btn btnSecondary" @click="order = null">Проверить другой заказ</button>
     </div>
 
     <div v-else class="surface-card box checker">
       <input v-model="orderId" placeholder="Введите номер заказа" class="input" />
-      <button class="btn-primary" @click="fetchOrder">Проверить</button>
+      <button class="btn btnPrimary" @click="fetchOrder">Проверить</button>
     </div>
   </div>
 </template>
