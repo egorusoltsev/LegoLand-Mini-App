@@ -9,10 +9,8 @@
         <ProductCard
           v-for="product in products"
           :key="product.id"
-          :title="product.title"
-          :price="product.price"
-          :image="getImageUrl(product.image)"
-          @buy="addToCart(product)"
+          :product="{ ...product, image: getImageUrl(product.image) }"
+          @buy="addToCart"
         />
       </div>
       <div class="cart-info">

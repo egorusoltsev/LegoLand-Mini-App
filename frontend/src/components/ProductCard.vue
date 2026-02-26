@@ -7,9 +7,8 @@
     </div>
 
     <div class="card-body">
-      <h3 class="title">{{ title }}</h3>
-
-      <p class="price">{{ formatPrice(price) }} ₽</p>
+      <h3>{{ product.title }}</h3>
+      <p>{{ formatPrice(product.price) }} ₽</p>
 
       <div class="buttons">
         <button class="btn secondary">
@@ -29,13 +28,14 @@
 export default {
   name: 'ProductCard',
   props: {
-    title: String,
-    price: Number,
-    image: String
+    product: {
+      type: Object,
+      required: true
+    }
   },
   methods: {
     buy() {
-      this.$emit('buy')
+      this.$emit('buy', this.product)
     },
     formatPrice(value) {
       return new Intl.NumberFormat('ru-RU').format(value)
