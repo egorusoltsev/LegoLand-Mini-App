@@ -1,5 +1,5 @@
 <template>
-  <span class="logo">LEGO<span class="logo-land">land</span></span>
+  <span class="logo">Lego<span class="logo-land">Land</span></span>
 </template>
 
 <script>
