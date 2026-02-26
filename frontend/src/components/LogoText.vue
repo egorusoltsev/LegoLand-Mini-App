@@ -12,7 +12,7 @@ export default {
 .logo {
   font-weight: 900;
   letter-spacing: -0.03em;
-  color: var(--brand-red);
+  color: var(--primary);
 }
 
 .logo-land {

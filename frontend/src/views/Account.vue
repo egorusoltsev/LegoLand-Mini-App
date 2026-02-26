@@ -9,14 +9,14 @@
 
       <div v-if="!user" class="surface-card state-card">
         <p>Чтобы оформить заказ, войдите через Telegram.</p>
-        <button class="btn-primary" @click="startTelegramAuth">Войти через Telegram</button>
+        <button class="btn btnPrimary" @click="startTelegramAuth">Войти через Telegram</button>
         <p v-if="authError" class="error">{{ authError }}</p>
       </div>
 
       <div v-else>
         <div class="surface-card state-card">
           <p><strong>Привет, {{ user.first_name || user.username }} 👋</strong></p>
-          <button class="btn-secondary" @click="logout">Выйти</button>
+          <button class="btn btnSecondary" @click="logout">Выйти</button>
         </div>
 
         <h3 class="orders-title">Мои заказы</h3>
