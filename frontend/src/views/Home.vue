@@ -6,8 +6,17 @@
         <p class="chip">Оригинальные LEGO наборы</p>
         <h1><LogoText /> — оригинальные наборы LEGO по ценам ниже рынка</h1>
         <p class="muted">Подборка редких и популярных наборов с быстрой доставкой по РФ.</p>
-        <button class="btn btnPrimary" type="button" @click="scrollToCatalog">Перейти в каталог</button>
+        <button class="btn btnPrimary hero-cta" type="button" @click="scrollToCatalog">Перейти в каталог</button>
         <div class="hero-shape" aria-hidden="true"></div>
+      </section>
+
+      <section class="strip section card" aria-label="Популярные товары" v-if="preparedProducts.length">
+        <div class="strip-track">
+          <article class="strip-item" v-for="(product, index) in stripProducts" :key="product.id + '-' + index">
+            <img v-if="product.image" :src="product.image" :alt="product.title" loading="lazy" />
+            <span>{{ product.title }}</span>
+          </article>
+        </div>
       </section>
 
       <section id="catalog" class="section">
@@ -15,6 +24,13 @@
           <h2 class="sectionTitle">Каталог</h2>
           <p class="muted">Найдено: {{ filteredProducts.length }} товаров</p>
         </div>
+
+        <div v-if="loadError" class="card error-card">
+          <strong>Не удалось загрузить каталог</strong>
+          <p class="muted">{{ loadError }}</p>
+        </div>
+
+        <div v-if="!loading && !filteredProducts.length" class="card loading">По вашему запросу ничего не найдено.</div>
 
         <div class="catalog-layout">
           <aside class="filters card">
@@ -34,51 +50,11 @@
         </div>
       </section>
 
-      <section class="card cart-panel section" v-if="cart.length" id="cart-section">
-        <h2 class="sectionTitle">Корзина</h2>
-        <div class="cart-row" v-for="item in cart" :key="item.id">
-          <div><strong>{{ item.title }}</strong><p class="muted">{{ formatPrice(item.price) }} ₽ × {{ item.quantity }}</p></div>
-          <div class="cart-actions">
-            <button type="button" class="btn btnSecondary" @click="decreaseQuantity(item)">−</button>
-            <button type="button" class="btn btnSecondary" @click="increaseQuantity(item)">+</button>
-            <button type="button" class="btn btnSecondary" @click="removeFromCart(item)">Удалить</button>
-          </div>
-        </div>
-        <p class="cart-total">Итого: <strong>{{ cartItemsTotal }}</strong> шт. на <strong>{{ formatPrice(cartPriceTotal) }} ₽</strong></p>
-      </section>
-
-      <section class="card order-panel section" v-if="cart.length" id="checkout-section">
-        <h2 class="sectionTitle">Данные для заказа</h2>
-        <div class="order-grid">
-          <label>Имя<input v-model="customerName" class="input" type="text" placeholder="Иван" /></label>
-          <label>Телефон<input v-model="customerPhone" class="input" type="text" placeholder="+7 999 123-45-67" /></label>
-          <label class="wide">Адрес (необязательно)<input v-model="customerAddress" class="input" type="text" placeholder="Москва, улица..., дом..." /></label>
-        </div>
-        <label class="policy"><input v-model="agreePolicy" type="checkbox" /><span>Согласен с <a href="#" @click.prevent>политикой обработки данных</a></span></label>
-        <button class="btn btnPrimary desktop-order-btn" type="button" @click="sendOrder">{{ submitting ? 'Оформляем...' : 'Оформить заказ' }}</button>
-      </section>
-
-      <section class="faq section">
-        <h2 class="sectionTitle">FAQ</h2>
-        <div class="faq-list">
-          <article v-for="(item, index) in faqItems" :key="item.question" class="card faq-item">
-            <button class="faq-toggle" type="button" @click="toggleFaq(index)">{{ item.question }}<span>{{ openFaqIndex === index ? '−' : '+' }}</span></button>
-            <p v-if="openFaqIndex === index" class="muted">{{ item.answer }}</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="card contacts section">
-        <h2 class="sectionTitle">Связаться с нами</h2>
-        <div class="contact-grid"><label>Имя<input v-model="contactName" class="input" type="text" placeholder="Ваше имя" /></label><label>Телефон<input v-model="contactPhone" class="input" type="text" placeholder="+7 900 000-00-00" /></label></div>
-        <a class="btn btnPrimary tg-link" :href="telegramContactUrl" target="_blank" rel="noopener noreferrer">Написать в Telegram</a>
-      </section>
-
       <footer class="footer muted">© {{ brandName }} Mini App</footer>
       <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
     </main>
 
-    <div v-if="cartDrawerOpen" class="drawer-overlay" @click="closeDrawers">
+    <div v-if="cartDrawerOpen" class="drawer-overlay" @click="closeOverlay('cart')">
       <aside class="drawer" @click.stop>
         <h3>Корзина</h3>
         <p v-if="!cart.length" class="muted">Корзина пока пустая.</p>
@@ -92,11 +68,10 @@
           </div>
         </div>
         <p class="drawer-total">Итого: {{ formatPrice(cartPriceTotal) }} ₽</p>
-        <button class="btn btnPrimary" type="button" @click="goToCheckout">Перейти к оформлению</button>
       </aside>
     </div>
 
-    <div v-if="favoritesDrawerOpen" class="drawer-overlay" @click="closeDrawers">
+    <div v-if="favoritesDrawerOpen" class="drawer-overlay" @click="closeOverlay('fav')">
       <aside class="drawer" @click.stop>
         <h3>Избранное</h3>
         <p v-if="!favorites.length" class="muted">Пока нет избранных наборов.</p>
@@ -114,11 +89,19 @@
 import Header from '../components/Header.vue'
 import ProductCard from '../components/ProductCard.vue'
 import LogoText from '../components/LogoText.vue'
-import { apiFetch } from '../api'
-import { getToken } from '../authToken'
-import { BRAND_NAME, TELEGRAM_CONTACT_URL, UI_EVENTS } from '../constants'
-import { add, clear, dec, inc, loadCart, remove, subscribe as subscribeCart, totalItems, totalPrice } from '../store/cartStore'
+import { API_URL, apiFetch } from '../api'
+import { BRAND_NAME, UI_EVENTS } from '../constants'
+import { add, dec, inc, loadCart, remove, subscribe as subscribeCart, totalPrice } from '../store/cartStore'
 import { loadFavorites, subscribe as subscribeFavorites, toggle } from '../store/favoritesStore'
+
+function normalizeText(input) {
+  return String(input || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я0-9\s-]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 export default {
   name: 'HomeView',
@@ -132,27 +115,22 @@ export default {
       cartDrawerOpen: false,
       favoritesDrawerOpen: false,
       loading: true,
-      submitting: false,
-      customerName: '', customerPhone: '', customerAddress: '', agreePolicy: false,
-      selectedCategory: 'all', minPrice: '', maxPrice: '', sortBy: 'popular',
+      selectedCategory: 'all',
+      minPrice: '',
+      maxPrice: '',
+      sortBy: 'popular',
       searchQuery: '',
-      openFaqIndex: null, toastMessage: '', toastTimer: null,
-      contactName: '', contactPhone: '',
-      telegramContactUrl: TELEGRAM_CONTACT_URL,
+      loadError: '',
+      toastMessage: '',
+      toastTimer: null,
       unsubscribeCart: null,
-      unsubscribeFavorites: null,
-      faqItems: [
-        { question: 'Это оригинальные LEGO?', answer: 'Да, мы продаём только оригинальные наборы LEGO в заводской упаковке.' },
-        { question: 'Какие сроки доставки?', answer: 'По Москве — от 1 дня, по РФ обычно 2–6 дней в зависимости от региона.' },
-        { question: 'Можно ли сделать подарочную упаковку?', answer: 'Да, добавим подарочную упаковку и открытку по вашему пожеланию.' },
-        { question: 'Как оформить заказ в Telegram?', answer: 'Добавьте товары в корзину, заполните форму и нажмите «Оформить заказ».' },
-        { question: 'Можно ли вернуть товар?', answer: 'Да, возврат возможен по правилам дистанционной торговли при сохранении вида товара.' }
-      ]
+      unsubscribeFavorites: null
     }
   },
   computed: {
     categories() { return ['Star Wars', 'Technic', 'City', 'Icons'] },
     preparedProducts() { return this.products.map((product) => ({ ...product, image: this.getImageUrl(product.image) })) },
+    stripProducts() { return this.preparedProducts.concat(this.preparedProducts) },
     filteredProducts() {
       let result = this.preparedProducts.slice()
       const min = Number(this.minPrice)
@@ -160,16 +138,31 @@ export default {
       if (this.selectedCategory !== 'all') result = result.filter((product) => String(product.category || product.series || '').toLowerCase().includes(this.selectedCategory.toLowerCase()))
       if (!isNaN(min) && min > 0) result = result.filter(function (product) { return Number(product.price) >= min })
       if (!isNaN(max) && max > 0) result = result.filter(function (product) { return Number(product.price) <= max })
-      if (this.searchQuery.trim()) {
-        const query = this.searchQuery.trim().toLowerCase()
-        result = result.filter(function (product) { return String(product.title || '').toLowerCase().includes(query) })
+
+      const query = normalizeText(this.searchQuery)
+      if (query) {
+        const parts = query.split(' ').filter(function (item) { return item.length > 0 })
+        result = result.filter(function (product) {
+          const haystack = normalizeText([product.title, product.category, product.set_number, product.id].join(' '))
+          if (!parts.length) return true
+          if (query.length <= 2) return haystack.indexOf(query) !== -1
+          return parts.every(function (part) { return haystack.indexOf(part) !== -1 })
+        })
       }
+
       if (this.sortBy === 'price-asc') result.sort(function (a, b) { return Number(a.price) - Number(b.price) })
       if (this.sortBy === 'price-desc') result.sort(function (a, b) { return Number(b.price) - Number(a.price) })
       return result
     },
-    cartItemsTotal() { return totalItems(this.cart) },
     cartPriceTotal() { return totalPrice(this.cart) }
+  },
+  watch: {
+    '$route.query': {
+      deep: true,
+      handler() {
+        this.syncDrawersWithRoute()
+      }
+    }
   },
   methods: {
     formatPrice(value) { return new Intl.NumberFormat('ru-RU').format(value) },
@@ -183,16 +176,10 @@ export default {
     showToast(message) {
       this.toastMessage = message
       if (this.toastTimer) clearTimeout(this.toastTimer)
-      this.toastTimer = setTimeout(() => { this.toastMessage = '' }, 2000)
+      this.toastTimer = setTimeout(() => { this.toastMessage = '' }, 1800)
     },
-    toggleFaq(index) { this.openFaqIndex = this.openFaqIndex === index ? null : index },
     scrollToCatalog() {
       const section = document.getElementById('catalog')
-      if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    },
-    goToCheckout() {
-      this.closeDrawers()
-      const section = document.getElementById('checkout-section')
       if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' })
     },
     addToCart(product) {
@@ -202,53 +189,81 @@ export default {
     increaseQuantity(product) { this.cart = inc(product.id) },
     decreaseQuantity(product) { this.cart = dec(product.id) },
     removeFromCart(product) { this.cart = remove(product.id) },
-    onOpenCart() { this.cartDrawerOpen = true; this.favoritesDrawerOpen = false },
-    onOpenFavorites() { this.favoritesDrawerOpen = true; this.cartDrawerOpen = false },
+    onOpenCart() {
+      this.updateOverlayQuery('cart', true)
+    },
+    onOpenFavorites() {
+      this.updateOverlayQuery('fav', true)
+    },
+    onOpenSearch() {
+      this.updateOverlayQuery('search', true)
+    },
+    onCloseSearch() {
+      this.updateOverlayQuery('search', false, true)
+    },
     onSearch(event) { this.searchQuery = event && event.detail ? String(event.detail) : '' },
-    closeDrawers() { this.cartDrawerOpen = false; this.favoritesDrawerOpen = false },
+    closeOverlay(type) {
+      this.updateOverlayQuery(type, false, true)
+    },
+    syncDrawersWithRoute() {
+      const query = this.$route.query || {}
+      this.cartDrawerOpen = query.cart === '1'
+      this.favoritesDrawerOpen = query.fav === '1'
+    },
+    updateOverlayQuery(type, open, replace) {
+      const nextQuery = { ...this.$route.query }
+      const key = type
+      if (open) {
+        if (key === 'cart') delete nextQuery.fav
+        if (key === 'fav') delete nextQuery.cart
+        nextQuery[key] = '1'
+      } else {
+        delete nextQuery[key]
+      }
+      const hasDiff = JSON.stringify(nextQuery) !== JSON.stringify(this.$route.query || {})
+      if (!hasDiff) return
+      if (replace) {
+        this.$router.replace({ query: nextQuery })
+      } else {
+        this.$router.push({ query: nextQuery })
+      }
+    },
     async fetchProducts() {
+      this.loadError = ''
       try {
-        const res = await apiFetch('/products')
+        const endpoint = '/products'
+        const res = await apiFetch(endpoint)
+        if (!res.ok) {
+          const responseText = await res.text()
+          console.error('Ошибка загрузки товаров', {
+            apiUrl: API_URL,
+            endpoint,
+            status: res.status,
+            responseText
+          })
+          this.loadError = 'Код: ' + res.status
+          this.products = []
+          return
+        }
         const data = await res.json()
         this.products = Array.isArray(data) ? data : []
       } catch (error) {
-        console.error('Ошибка загрузки товаров', error)
+        console.error('Ошибка загрузки товаров', {
+          apiUrl: API_URL,
+          endpoint: '/products',
+          status: 'network_error',
+          responseText: error && error.message ? error.message : 'unknown'
+        })
+        this.products = []
+        this.loadError = 'Сетевая ошибка при загрузке каталога.'
       } finally {
         this.loading = false
-        this.submitting = false
       }
     },
     getImageUrl(image) {
-      const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
       if (typeof image === 'string' && image && (image.startsWith('http://') || image.startsWith('https://'))) return image
       if (typeof image === 'string' && image) return API_URL + '/images/' + image
       return ''
-    },
-    async sendOrder() {
-      if (this.submitting) return
-      this.submitting = true
-      const token = getToken()
-      if (!token) { this.submitting = false; this.$router.push('/account'); return }
-      if (!this.customerName.trim()) { this.showToast('Введите имя'); this.submitting = false; return }
-      if (!this.customerPhone.trim()) { this.showToast('Введите телефон'); this.submitting = false; return }
-      if (!this.agreePolicy) { this.showToast('Подтвердите согласие с политикой'); this.submitting = false; return }
-
-      const order = { name: this.customerName, phone: this.customerPhone, address: this.customerAddress, items: this.cart.map(function (item) { return { id: item.id, title: item.title, price: item.price, quantity: item.quantity } }), total: this.cartPriceTotal }
-      try {
-        const res = await apiFetch('/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) })
-        if (!res.ok) { this.showToast('Не удалось оформить заказ. Войдите через Telegram.'); this.submitting = false; return }
-        const data = await res.json()
-        localStorage.setItem('last_order_id', data.order_id)
-        this.cart = clear()
-        this.customerName = ''
-        this.customerPhone = ''
-        this.customerAddress = ''
-        this.agreePolicy = false
-        this.$router.push('/account')
-      } catch (error) {
-        console.error('Ошибка заказа', error)
-        this.showToast('Ошибка соединения')
-      } finally { this.submitting = false }
     }
   },
   mounted() {
@@ -258,7 +273,10 @@ export default {
     this.unsubscribeFavorites = subscribeFavorites((favorites) => { this.favorites = Array.isArray(favorites) ? favorites : [] })
     window.addEventListener(UI_EVENTS.OPEN_CART, this.onOpenCart)
     window.addEventListener(UI_EVENTS.OPEN_FAVORITES, this.onOpenFavorites)
+    window.addEventListener(UI_EVENTS.OPEN_SEARCH, this.onOpenSearch)
+    window.addEventListener(UI_EVENTS.CLOSE_SEARCH, this.onCloseSearch)
     window.addEventListener(UI_EVENTS.SET_SEARCH, this.onSearch)
+    this.syncDrawersWithRoute()
     this.fetchProducts()
   },
   beforeUnmount() {
@@ -266,6 +284,8 @@ export default {
     if (this.unsubscribeFavorites) this.unsubscribeFavorites()
     window.removeEventListener(UI_EVENTS.OPEN_CART, this.onOpenCart)
     window.removeEventListener(UI_EVENTS.OPEN_FAVORITES, this.onOpenFavorites)
+    window.removeEventListener(UI_EVENTS.OPEN_SEARCH, this.onOpenSearch)
+    window.removeEventListener(UI_EVENTS.CLOSE_SEARCH, this.onCloseSearch)
     window.removeEventListener(UI_EVENTS.SET_SEARCH, this.onSearch)
     if (this.toastTimer) { clearTimeout(this.toastTimer); this.toastTimer = null }
   }
@@ -275,33 +295,43 @@ export default {
 <style scoped>
 .home-page { padding-top: 22px; padding-bottom: 40px; }
 .hero { padding: clamp(24px, 4vw, 44px); position: relative; overflow: hidden; }
-.hero-shape { position: absolute; right: -80px; top: -40px; width: 260px; height: 180px; background: #fee2e2; border-radius: 24px; transform: rotate(-12deg); }
+.hero-shape { pointer-events: none; position: absolute; right: -40px; top: -24px; width: 180px; height: 120px; background: #fee2e2; border-radius: 24px; transform: rotate(-12deg); z-index: 0; }
 .hero > * { position: relative; z-index: 1; }
+.hero-cta { z-index: 2; position: relative; }
+.strip { overflow: hidden; padding: 10px 0; }
+.strip-track { display: flex; gap: 12px; width: max-content; padding: 0 12px; animation: run-strip 40s linear infinite; }
+.strip-item { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 12px; background: #fff; padding: 6px 10px; min-width: 190px; }
+.strip-item img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+.strip:hover .strip-track { animation-play-state: paused; }
 .section-head { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-bottom: 14px; }
 .catalog-layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
 .filters { padding: 16px; height: fit-content; position: sticky; top: 88px; }
 .filters label { display: block; margin-top: 10px; font-size: 14px; }
 .catalog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .loading { padding: 18px; }
-.cart-panel, .order-panel, .contacts { padding: 18px; }
-.cart-row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); padding: 10px 0; }
-.cart-actions, .drawer-actions { display: flex; gap: 6px; }
-.cart-total { margin-top: 12px; font-size: 18px; }
-.order-grid, .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.wide { grid-column: 1 / -1; }
-.policy { margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; }
-.policy input { width: auto; }
-.desktop-order-btn { margin-top: 14px; min-width: 220px; }
-.faq-list { display: grid; gap: 10px; }
-.faq-item { padding: 14px; }
-.faq-toggle { width: 100%; border: 0; background: transparent; padding: 0; display: flex; justify-content: space-between; align-items: center; font-weight: 600; text-align: left; }
-.tg-link { display: inline-flex; }
+.error-card { padding: 14px; margin-bottom: 12px; border-color: #fecaca; }
 .footer { padding: 28px 0 12px; text-align: center; }
 .toast { position: fixed; right: 14px; bottom: 18px; background: var(--text); color: #fff; padding: 10px 14px; border-radius: 12px; z-index: 100; box-shadow: var(--shadow); }
 .drawer-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4); z-index: 180; display: flex; justify-content: flex-end; }
 .drawer { width: min(420px, 100%); height: 100%; background: #fff; border-left: 1px solid var(--border); padding: 16px; overflow: auto; }
 .drawer-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px; }
+.drawer-actions { display: flex; gap: 6px; }
 .drawer-total { margin-top: 12px; font-weight: 700; }
-@media (max-width: 980px) { .catalog-layout { grid-template-columns: 1fr; } .filters { position: static; } .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 700px) { .section-head { flex-direction: column; align-items: start; } .catalog-grid { grid-template-columns: 1fr; } .contact-grid, .order-grid { grid-template-columns: 1fr; } .cart-row { flex-direction: column; } }
+@keyframes run-strip {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .strip-track { animation: none; }
+}
+@media (max-width: 980px) {
+  .catalog-layout { grid-template-columns: 1fr; }
+  .filters { position: static; }
+  .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .hero-shape { width: 110px; height: 72px; right: -34px; top: -16px; }
+  .section-head { flex-direction: column; align-items: start; }
+  .catalog-grid { grid-template-columns: 1fr; }
+}
 </style>

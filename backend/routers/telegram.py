@@ -28,22 +28,26 @@ def attach_telegram_to_session(code: str, telegram_id: int) -> bool:
 @router.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
     data = await request.json()
-    print("TELEGRAM UPDATE:", data)
+    print("[telegram.webhook] update received", {"keys": list(data.keys())})
 
     if "message" not in data:
         return {"ok": True}
 
     message = data["message"]
     text = message.get("text", "")
-    chat_id = message["chat"]["id"]
+    chat_id = message["chat"].get("id")
+    print("[telegram.webhook] message", {"chat_id": chat_id, "text": text[:80]})
 
     if text.startswith("/start web_"):
         code = text.replace("/start web_", "").strip()
         success = attach_telegram_to_session(code, chat_id)
 
-        if success:
-            send_telegram_reply(chat_id, "✅ Вы успешно авторизованы. Вернитесь на сайт.")
-        else:
-            send_telegram_reply(chat_id, "❌ Сессия устарела.")
+        try:
+            if success:
+                send_telegram_reply(chat_id, "✅ Вы успешно авторизованы. Вернитесь на сайт.")
+            else:
+                send_telegram_reply(chat_id, "❌ Сессия устарела.")
+        except Exception as exc:
+            print("[telegram.webhook] telegram api error", str(exc))
 
     return {"ok": True}
