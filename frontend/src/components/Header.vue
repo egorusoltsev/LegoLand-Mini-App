@@ -9,7 +9,7 @@
         <button class="iconBtn" type="button" aria-label="Поиск" @click="toggleSearchModal">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="16.65" y1="16.65" x2="21" y2="21" /></svg>
         </button>
-        <button class="iconBtn" type="button" aria-label="Аккаунт" @click="goToAccount">
+        <button class="iconBtn" type="button" aria-label="Аккаунт" @click="openAccountPanel">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 20c1.7-3.3 4.4-5 8-5s6.3 1.7 8 5" /></svg>
         </button>
         <button class="iconBtn" type="button" aria-label="Избранное" @click="openFavorites">
@@ -33,6 +33,17 @@
         </div>
       </div>
     </div>
+
+    <div v-if="accountChooserOpen" class="search-modal-overlay" @click="closeAccountPanel">
+      <div class="search-modal card" @click.stop>
+        <h3>Аккаунт</h3>
+        <p class="muted">Выберите действие</p>
+        <div class="search-actions auth-actions">
+          <button class="btn btnSecondary" type="button" @click="goToAccount('login')">Войти</button>
+          <button class="btn btnPrimary" type="button" @click="goToAccount('register')">Зарегистрироваться</button>
+        </div>
+      </div>
+    </div>
   </header>
 </template>
 
@@ -52,6 +63,7 @@ export default {
       unsubscribeCart: null,
       unsubscribeFavorites: null,
       searchModalOpen: false,
+      accountChooserOpen: false,
       searchQuery: ''
     }
   },
@@ -65,6 +77,15 @@ export default {
     if (this.unsubscribeCart) this.unsubscribeCart()
     if (this.unsubscribeFavorites) this.unsubscribeFavorites()
   },
+
+  watch: {
+    '$route.query.search': {
+      immediate: true,
+      handler(value) {
+        this.searchModalOpen = value === '1'
+      }
+    }
+  },
   methods: {
     onCartUpdate(cart) {
       this.cartCount = totalItems(cart)
@@ -72,8 +93,16 @@ export default {
     onFavoritesUpdate(favorites) {
       this.favoritesCount = count(favorites)
     },
-    goToAccount() {
-      this.$router.push('/account')
+    openAccountPanel() {
+      this.accountChooserOpen = true
+    },
+    closeAccountPanel() {
+      this.accountChooserOpen = false
+    },
+    goToAccount(mode) {
+      this.accountChooserOpen = false
+      this.$router.push({ path: '/account', query: { mode } })
+      window.dispatchEvent(new CustomEvent(UI_EVENTS.OPEN_AUTH_CHOOSER, { detail: mode }))
     },
     openCart() {
       window.dispatchEvent(new CustomEvent(UI_EVENTS.OPEN_CART))
@@ -91,9 +120,12 @@ export default {
     toggleSearchModal() {
       this.searchModalOpen = !this.searchModalOpen
       if (this.searchModalOpen) {
+        window.dispatchEvent(new CustomEvent(UI_EVENTS.OPEN_SEARCH))
         this.$nextTick(function () {
           if (this.$refs.searchInput && this.$refs.searchInput.focus) this.$refs.searchInput.focus()
         })
+      } else {
+        window.dispatchEvent(new CustomEvent(UI_EVENTS.CLOSE_SEARCH))
       }
     }
   }
@@ -110,6 +142,7 @@ export default {
 .search-modal { width: min(520px, 100%); padding: 18px; }
 .search-modal h3 { margin-bottom: 10px; }
 .search-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.auth-actions { justify-content: space-between; }
 @media (max-width: 700px) {
   .header-row { height: 64px; }
   .brand { font-size: 24px; }

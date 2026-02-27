@@ -1,28 +1,54 @@
 import { getToken, clearToken } from './authToken'
 
-const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
+function resolveApiUrl() {
+  const rawUrl = import.meta.env.VITE_API_URL
+  if (typeof rawUrl === 'string' && rawUrl.trim()) {
+    return rawUrl.replace(/\/$/, '')
+  }
+
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return window.location.origin
+  }
+
+  return ''
+}
+
+export const API_URL = resolveApiUrl()
 
 export async function apiFetch(path, options = {}) {
   const token = getToken()
+  const endpoint = path.charAt(0) === '/' ? path : '/' + path
+  const url = API_URL + endpoint
 
   const headers = {
-    ...(options.headers || {}),
+    ...(options.headers || {})
   }
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+    headers.Authorization = 'Bearer ' + token
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers
-  })
+  let res
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      redirect: 'follow'
+    })
+  } catch (error) {
+    console.error('API network error', {
+      apiUrl: API_URL,
+      endpoint,
+      error
+    })
+    throw error
+  }
 
-  // 👇 важная штука: если токен невалиден / нет токена на защищённом роуте
   if (res.status === 401) {
     clearToken()
-    // отправляем в аккаунт (там кнопка входа)
-    window.location.href = "/account"
+    if (typeof window !== 'undefined') {
+      window.location.href = '/#/account'
+    }
     return res
   }
 

@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, BigInteger, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from db import Base
 
+
 class OrderModel(Base):
     __tablename__ = "orders"
 
@@ -33,6 +34,15 @@ class UserModel(Base):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)
+
+
+class UserProfileModel(Base):
+    __tablename__ = "user_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(BigInteger, unique=True, index=True, nullable=False)
+    full_name = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
 
 
 class AuthSessionModel(Base):
