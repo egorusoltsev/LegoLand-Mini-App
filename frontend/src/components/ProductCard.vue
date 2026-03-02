@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <div v-if="showModal" class="modal-overlay" @click="closeDetails">
+    <div v-if="isOpen" class="modal-overlay" @click="closeDetails">
       <div class="modal-card" @click.stop>
         <button class="close-btn" type="button" @click="closeDetails">✕</button>
         <img :src="product.image" :alt="product.title" class="modal-image" />
@@ -37,12 +37,10 @@ export default {
   name: 'ProductCard',
   props: {
     product: { type: Object, required: true },
-    favorite: { type: Boolean, default: false }
+    favorite: { type: Boolean, default: false },
+    isOpen: { type: Boolean, default: false }
   },
-  emits: ['buy', 'toggle-favorite'],
-  data() {
-    return { showModal: false }
-  },
+  emits: ['buy', 'toggle-favorite', 'open', 'close'],
   computed: {
     productSpecs() {
       const pieces = this.product && this.product.pieces ? 'Деталей: ' + this.product.pieces : ''
@@ -57,8 +55,8 @@ export default {
     }
   },
   methods: {
-    openDetails() { this.showModal = true },
-    closeDetails() { this.showModal = false },
+    openDetails() { this.$emit('open', this.product.id) },
+    closeDetails() { this.$emit('close') },
     buy() { this.$emit('buy', this.product) },
     buyFromModal() { this.buy(); this.closeDetails() },
     toggleFavoriteState() { this.$emit('toggle-favorite', this.product) },

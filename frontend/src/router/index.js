@@ -5,6 +5,7 @@ import Track from '../views/Track.vue'
 import Account from '../views/Account.vue'
 import Privacy from '../views/Privacy.vue'
 import Offer from '../views/Offer.vue'
+import Info from '../views/Info.vue'
 import { getToken } from '../authToken'
 
 const routes = [
@@ -29,6 +30,11 @@ const routes = [
     path: '/offer',
     name: 'offer',
     component: Offer
+  },
+  {
+    path: '/info',
+    name: 'info',
+    component: Info
   }
 ]
 
