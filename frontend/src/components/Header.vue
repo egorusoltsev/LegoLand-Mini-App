@@ -6,6 +6,9 @@
       </router-link>
 
       <nav class="header-actions">
+        <button class="iconBtn" type="button" aria-label="Меню" @click="toggleMenuDrawer">
+          ☰
+        </button>
         <button class="iconBtn" type="button" aria-label="Поиск" @click="toggleSearchModal">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="16.65" y1="16.65" x2="21" y2="21" /></svg>
         </button>
@@ -44,6 +47,20 @@
         </div>
       </div>
     </div>
+
+    <div v-if="menuDrawerOpen" class="menu-overlay" @click="toggleMenuDrawer">
+      <aside class="menu-drawer" @click.stop>
+        <div class="menu-head">
+          <strong>Меню</strong>
+          <button class="btn btnSecondary" type="button" @click="toggleMenuDrawer">✕</button>
+        </div>
+        <button class="menu-link" type="button" @click="navigateTo('/')">Каталог</button>
+        <button class="menu-link" type="button" @click="navigateTo('/account')">Аккаунт</button>
+        <button class="menu-link" type="button" @click="navigateTo('/info')">Информация</button>
+        <button class="menu-link" type="button" @click="navigateTo('/privacy')">Политика конфиденциальности</button>
+        <button class="menu-link" type="button" @click="navigateTo('/offer')">Публичная оферта</button>
+      </aside>
+    </div>
   </header>
 </template>
 
@@ -64,7 +81,8 @@ export default {
       unsubscribeFavorites: null,
       searchModalOpen: false,
       accountChooserOpen: false,
-      searchQuery: ''
+      searchQuery: '',
+      menuDrawerOpen: false
     }
   },
   mounted() {
@@ -127,6 +145,14 @@ export default {
       } else {
         window.dispatchEvent(new CustomEvent(UI_EVENTS.CLOSE_SEARCH))
       }
+    },
+    toggleMenuDrawer() {
+      this.menuDrawerOpen = !this.menuDrawerOpen
+    },
+    navigateTo(path) {
+      this.menuDrawerOpen = false
+      if (this.$route.path === path) return
+      this.$router.push(path)
     }
   }
 }
@@ -140,6 +166,10 @@ export default {
 .actionBadge { position: absolute; margin-top: -26px; margin-left: 24px; }
 .search-modal-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.35); display: flex; justify-content: center; align-items: flex-start; padding: 88px 16px 16px; z-index: 120; }
 .search-modal { width: min(520px, 100%); padding: 18px; }
+.menu-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.35); z-index: 130; display: flex; justify-content: flex-start; }
+.menu-drawer { width: min(320px, 88vw); background: #fff; height: 100%; border-right: 1px solid var(--border); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.menu-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.menu-link { border: 1px solid var(--border); background: #fff; border-radius: 12px; padding: 10px 12px; text-align: left; font-weight: 600; }
 .search-modal h3 { margin-bottom: 10px; }
 .search-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .auth-actions { justify-content: space-between; }

@@ -1,5 +1,6 @@
 <template>
   <div class="container account-page">
+    <button class="btn btnSecondary back-btn" type="button" @click="$router.push('/')">← Назад</button>
     <h2 class="section-title">Аккаунт</h2>
 
     <div v-if="loading" class="surface-card state-card">Загрузка...</div>
@@ -18,7 +19,7 @@
 
       <div v-if="user">
         <div class="surface-card state-card">
-          <p><strong>Привет, {{ user.first_name || user.username || 'друг' }} 👋</strong></p>
+          <p><strong>{{ greetingLine }} 👋</strong></p>
           <p class="muted" v-if="profile.full_name">{{ profile.full_name }} · {{ profile.phone }}</p>
           <button class="btn btnSecondary" @click="logout">Выйти</button>
         </div>
@@ -86,6 +87,21 @@ export default {
     },
     showDebugLine() {
       return import.meta.env.DEV || this.$route.query.debug === '1'
+    },
+    displayName() {
+      const profileName = this.profile && this.profile.full_name ? String(this.profile.full_name).trim() : ''
+      if (profileName) return profileName
+      const userName = this.user && this.user.first_name ? String(this.user.first_name).trim() : ''
+      if (userName) return userName
+      const username = this.user && this.user.username ? String(this.user.username).trim() : ''
+      if (username) return username
+      const localName = localStorage.getItem('legoland_profile_name')
+      if (localName && String(localName).trim()) return String(localName).trim()
+      return ''
+    },
+    greetingLine() {
+      if (this.displayName) return 'Привет, ' + this.displayName
+      return 'Привет'
     }
   },
 
@@ -143,6 +159,7 @@ export default {
           const data = await r.json()
           this.user = data.user
           this.profile = data.profile || { full_name: '', phone: '' }
+          if (this.profile && this.profile.full_name) localStorage.setItem('legoland_profile_name', String(this.profile.full_name))
           this.setDebug(endpoint, r.status, 'ok')
         } else {
           const message = await r.text()
@@ -309,6 +326,7 @@ export default {
       }
       const data = await response.json()
       this.profile = data.profile
+      if (this.profile && this.profile.full_name) localStorage.setItem('legoland_profile_name', String(this.profile.full_name))
       this.profileForm = { full_name: '', phone: '' }
       this.authMode = 'login'
     },
@@ -324,6 +342,7 @@ export default {
 
 <style scoped>
 .account-page { padding-top: 24px; padding-bottom: 30px; }
+.back-btn { margin-bottom: 12px; }
 .state-card { padding: 16px; }
 .auth-row { display: flex; gap: 8px; margin-top: 10px; }
 .profile-form { margin-top: 14px; display: grid; gap: 10px; }

@@ -3,6 +3,10 @@ import './style.css'
 import App from './App.vue'
 import router from './router'
 
+if (window.location && window.location.hash === '' && window.location.pathname === '/admin') {
+  window.location.replace('/#/admin')
+}
+
 const app = createApp(App)
 
 app.config.errorHandler = function (err, instance, info) {

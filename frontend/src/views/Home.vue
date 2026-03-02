@@ -1,6 +1,5 @@
 <template>
   <div>
-    <Header />
     <main class="container home-page">
       <section class="hero card section">
         <p class="chip">Оригинальные LEGO наборы</p>
@@ -46,7 +45,17 @@
           <div>
             <div v-if="loading" class="card loading">Загрузка товаров...</div>
             <div v-else class="catalog-grid">
-              <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product" :favorite="isFavorite(product.id)" @buy="addToCart" @toggle-favorite="toggleFavorite" />
+              <ProductCard
+                v-for="product in filteredProducts"
+                :key="product.id"
+                :product="product"
+                :favorite="isFavorite(product.id)"
+                :is-open="activeProductId === product.id"
+                @buy="addToCart"
+                @open="openDetails"
+                @close="closeDetails"
+                @toggle-favorite="toggleFavorite"
+              />
             </div>
           </div>
         </div>
@@ -77,6 +86,10 @@
 
     <div v-if="cartDrawerOpen" class="drawer-overlay" @click="closeOverlay('cart')">
       <aside class="drawer" @click.stop>
+        <div class="drawer-head">
+          <button class="btn btnSecondary" type="button" @click="goHomeAndClose">🏠</button>
+          <button class="btn btnSecondary" type="button" @click="closeOverlay('cart')">✕</button>
+        </div>
         <h3>Корзина</h3>
         <p v-if="!cart.length" class="muted">Корзина пока пустая.</p>
         <div v-for="item in cart" :key="item.id" class="drawer-item">
@@ -109,12 +122,16 @@
 
     <div v-if="favoritesDrawerOpen" class="drawer-overlay" @click="closeOverlay('fav')">
       <aside class="drawer" @click.stop>
+        <div class="drawer-head">
+          <button class="btn btnSecondary" type="button" @click="goHomeAndClose">🏠</button>
+          <button class="btn btnSecondary" type="button" @click="closeOverlay('fav')">✕</button>
+        </div>
         <h3>Избранное</h3>
         <p v-if="!favorites.length" class="muted">Пока нет избранных наборов.</p>
         <div v-for="product in favorites" :key="product.id" class="drawer-item">
           <strong>{{ product.title }}</strong>
           <p>{{ formatPrice(product.price) }} ₽</p>
-          <div class="drawer-actions"><button class="btn btnPrimary" type="button" @click="addToCart(product)">В корзину</button><button class="btn btnSecondary" type="button" @click="toggleFavorite(product)">Убрать</button></div>
+          <div class="drawer-actions"><button class="btn btnPrimary" type="button" @click="addFavoriteToCart(product)">В корзину</button><button class="btn btnSecondary" type="button" @click="toggleFavorite(product)">Убрать</button></div>
         </div>
       </aside>
     </div>
@@ -122,7 +139,6 @@
 </template>
 
 <script>
-import Header from '../components/Header.vue'
 import ProductCard from '../components/ProductCard.vue'
 import LogoText from '../components/LogoText.vue'
 import { API_URL, apiFetch } from '../api'
@@ -142,7 +158,7 @@ function normalizeText(input) {
 
 export default {
   name: 'HomeView',
-  components: { Header, ProductCard, LogoText },
+  components: { ProductCard, LogoText },
   data() {
     return {
       products: [],
@@ -164,9 +180,12 @@ export default {
       orderConsent: false,
       consentError: '',
       filtersOpen: false,
+      activeProductId: null,
       deliveryMethod: 'contact',
       orderSubmitted: false,
-      telegramContactUrl: TELEGRAM_CONTACT_URL
+      telegramContactUrl: TELEGRAM_CONTACT_URL,
+      hasDrawerHistoryState: false,
+      isProgrammaticDrawerBack: false
     }
   },
   computed: {
@@ -199,12 +218,6 @@ export default {
     cartPriceTotal() { return totalPrice(this.cart) }
   },
   watch: {
-    '$route.query': {
-      deep: true,
-      handler() {
-        this.syncDrawersWithRoute()
-      }
-    },
     orderConsent(value) {
       if (value) this.consentError = ''
     }
@@ -240,6 +253,16 @@ export default {
       this.cart = add(product)
       this.showToast('Добавлено в корзину')
     },
+    addFavoriteToCart(product) {
+      this.addToCart(product)
+      this.closeOverlay('fav')
+    },
+    openDetails(id) {
+      this.activeProductId = id
+    },
+    closeDetails() {
+      this.activeProductId = null
+    },
     increaseQuantity(product) { this.cart = inc(product.id) },
     decreaseQuantity(product) { this.cart = dec(product.id) },
     removeFromCart(product) { this.cart = remove(product.id) },
@@ -265,43 +288,61 @@ export default {
       this.$router.push(path)
     },
     onOpenCart() {
-      this.updateOverlayQuery('cart', true)
+      this.openOverlay('cart')
     },
     onOpenFavorites() {
-      this.updateOverlayQuery('fav', true)
+      this.openOverlay('fav')
     },
     onOpenSearch() {
-      this.updateOverlayQuery('search', true)
+      this.updateSearchQuery(true)
     },
     onCloseSearch() {
-      this.updateOverlayQuery('search', false, true)
+      this.updateSearchQuery(false)
     },
     onSearch(event) { this.searchQuery = event && event.detail ? String(event.detail) : '' },
+    onHistoryPopState() {
+      if (this.isProgrammaticDrawerBack) {
+        this.isProgrammaticDrawerBack = false
+        this.hasDrawerHistoryState = false
+        return
+      }
+      if (this.cartDrawerOpen || this.favoritesDrawerOpen) {
+        this.cartDrawerOpen = false
+        this.favoritesDrawerOpen = false
+        this.hasDrawerHistoryState = false
+      }
+    },
+    goHomeAndClose() {
+      this.closeOverlay(this.cartDrawerOpen ? 'cart' : 'fav')
+      if (this.$route.path !== '/') this.$router.push('/')
+    },
+    openOverlay(type) {
+      const hasOpenDrawer = this.cartDrawerOpen || this.favoritesDrawerOpen
+      this.cartDrawerOpen = type === 'cart'
+      this.favoritesDrawerOpen = type === 'fav'
+      if (!hasOpenDrawer) {
+        window.history.pushState({ legolandDrawer: type }, '')
+        this.hasDrawerHistoryState = true
+      }
+    },
     closeOverlay(type) {
-      this.updateOverlayQuery(type, false, true)
+      if (type === 'cart') this.cartDrawerOpen = false
+      if (type === 'fav') this.favoritesDrawerOpen = false
+      if (!this.cartDrawerOpen && !this.favoritesDrawerOpen && this.hasDrawerHistoryState) {
+        this.isProgrammaticDrawerBack = true
+        window.history.back()
+      }
     },
-    syncDrawersWithRoute() {
-      const query = this.$route.query || {}
-      this.cartDrawerOpen = query.cart === '1'
-      this.favoritesDrawerOpen = query.fav === '1'
-    },
-    updateOverlayQuery(type, open, replace) {
+    updateSearchQuery(open) {
       const nextQuery = { ...this.$route.query }
-      const key = type
       if (open) {
-        if (key === 'cart') delete nextQuery.fav
-        if (key === 'fav') delete nextQuery.cart
-        nextQuery[key] = '1'
+        nextQuery.search = '1'
       } else {
-        delete nextQuery[key]
+        delete nextQuery.search
       }
       const hasDiff = JSON.stringify(nextQuery) !== JSON.stringify(this.$route.query || {})
       if (!hasDiff) return
-      if (replace) {
-        this.$router.replace({ query: nextQuery })
-      } else {
-        this.$router.push({ query: nextQuery })
-      }
+      this.$router.replace({ query: nextQuery })
     },
     async fetchProducts() {
       this.loadError = ''
@@ -351,7 +392,7 @@ export default {
     window.addEventListener(UI_EVENTS.OPEN_SEARCH, this.onOpenSearch)
     window.addEventListener(UI_EVENTS.CLOSE_SEARCH, this.onCloseSearch)
     window.addEventListener(UI_EVENTS.SET_SEARCH, this.onSearch)
-    this.syncDrawersWithRoute()
+    window.addEventListener('popstate', this.onHistoryPopState)
     this.fetchProducts()
   },
   beforeUnmount() {
@@ -362,6 +403,7 @@ export default {
     window.removeEventListener(UI_EVENTS.OPEN_SEARCH, this.onOpenSearch)
     window.removeEventListener(UI_EVENTS.CLOSE_SEARCH, this.onCloseSearch)
     window.removeEventListener(UI_EVENTS.SET_SEARCH, this.onSearch)
+    window.removeEventListener('popstate', this.onHistoryPopState)
     if (this.toastTimer) { clearTimeout(this.toastTimer); this.toastTimer = null }
   }
 }
@@ -390,6 +432,7 @@ export default {
 .toast { position: fixed; right: 14px; bottom: 18px; background: var(--text); color: #fff; padding: 10px 14px; border-radius: 12px; z-index: 100; box-shadow: var(--shadow); }
 .drawer-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4); z-index: 180; display: flex; justify-content: flex-end; }
 .drawer { width: min(420px, 100%); height: 100%; background: #fff; border-left: 1px solid var(--border); padding: 16px; overflow: auto; }
+.drawer-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .drawer-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px; }
 .drawer-actions { display: flex; gap: 6px; }
 .drawer-total { margin-top: 12px; font-weight: 700; }
