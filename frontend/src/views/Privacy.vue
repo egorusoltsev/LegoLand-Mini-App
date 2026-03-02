@@ -32,6 +32,7 @@
       <h2>Контакты</h2>
       <p>Telegram: <a href="https://t.me/egor2815" target="_blank" rel="noopener noreferrer">@egor2815</a></p>
       <p>Email: <a href="mailto:egorusolcev498@gmail.com">egorusolcev498@gmail.com</a></p>
+      <p>ИНН: 253911587570</p>
     </article>
   </div>
 </template>
