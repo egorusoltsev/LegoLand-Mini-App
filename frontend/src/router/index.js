@@ -2,23 +2,34 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Admin from '../views/Admin.vue'
 import Track from '../views/Track.vue'
-import Account from "../views/Account.vue"
+import Account from '../views/Account.vue'
+import Privacy from '../views/Privacy.vue'
+import Offer from '../views/Offer.vue'
 import { getToken } from '../authToken'
 
 const routes = [
   { path: '/', component: Home },
   { path: '/admin', component: Admin },
   {
-  path: '/track',
-  name: 'Track',
-  component: Track
-},
-{
-  path: "/account",
-  name: "account",
-  component: Account,
-}
-
+    path: '/track',
+    name: 'Track',
+    component: Track
+  },
+  {
+    path: '/account',
+    name: 'account',
+    component: Account
+  },
+  {
+    path: '/privacy',
+    name: 'privacy',
+    component: Privacy
+  },
+  {
+    path: '/offer',
+    name: 'offer',
+    component: Offer
+  }
 ]
 
 const router = createRouter({
@@ -41,7 +52,7 @@ router.beforeEach((to, from, next) => {
 })
 
 router.onError((error) => {
-  console.error("Router error:", error)
+  console.error('Router error:', error)
 })
 
 export default router

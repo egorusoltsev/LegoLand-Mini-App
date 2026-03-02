@@ -50,7 +50,6 @@
         </div>
       </section>
 
-      <footer class="footer muted">© {{ brandName }} Mini App</footer>
       <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
     </main>
 
@@ -68,6 +67,14 @@
           </div>
         </div>
         <p class="drawer-total">Итого: {{ formatPrice(cartPriceTotal) }} ₽</p>
+        <div v-if="cart.length" class="consent-box">
+          <label class="consent-row">
+            <input v-model="orderConsent" type="checkbox" />
+            <span>Я согласен с <router-link to="/privacy">Политикой конфиденциальности</router-link> и <router-link to="/offer">Офертой</router-link></span>
+          </label>
+          <p v-if="consentError" class="consent-error">{{ consentError }}</p>
+          <button class="btn btnPrimary checkout-btn" type="button" @click="sendOrder">Оформить заказ</button>
+        </div>
       </aside>
     </div>
 
@@ -90,7 +97,7 @@ import Header from '../components/Header.vue'
 import ProductCard from '../components/ProductCard.vue'
 import LogoText from '../components/LogoText.vue'
 import { API_URL, apiFetch } from '../api'
-import { BRAND_NAME, UI_EVENTS } from '../constants'
+import { UI_EVENTS } from '../constants'
 import { add, dec, inc, loadCart, remove, subscribe as subscribeCart, totalPrice } from '../store/cartStore'
 import { loadFavorites, subscribe as subscribeFavorites, toggle } from '../store/favoritesStore'
 
@@ -108,7 +115,6 @@ export default {
   components: { Header, ProductCard, LogoText },
   data() {
     return {
-      brandName: BRAND_NAME,
       products: [],
       cart: [],
       favorites: [],
@@ -124,7 +130,9 @@ export default {
       toastMessage: '',
       toastTimer: null,
       unsubscribeCart: null,
-      unsubscribeFavorites: null
+      unsubscribeFavorites: null,
+      orderConsent: false,
+      consentError: ''
     }
   },
   computed: {
@@ -162,6 +170,9 @@ export default {
       handler() {
         this.syncDrawersWithRoute()
       }
+    },
+    orderConsent(value) {
+      if (value) this.consentError = ''
     }
   },
   methods: {
@@ -189,6 +200,15 @@ export default {
     increaseQuantity(product) { this.cart = inc(product.id) },
     decreaseQuantity(product) { this.cart = dec(product.id) },
     removeFromCart(product) { this.cart = remove(product.id) },
+    sendOrder() {
+      if (!this.orderConsent) {
+        this.consentError = 'Подтвердите согласие с Политикой конфиденциальности и Офертой.'
+        return
+      }
+      this.consentError = ''
+      this.showToast('Заказ принят в обработку. Мы свяжемся с вами для уточнения деталей.')
+      this.closeOverlay('cart')
+    },
     onOpenCart() {
       this.updateOverlayQuery('cart', true)
     },
@@ -310,13 +330,18 @@ export default {
 .catalog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .loading { padding: 18px; }
 .error-card { padding: 14px; margin-bottom: 12px; border-color: #fecaca; }
-.footer { padding: 28px 0 12px; text-align: center; }
 .toast { position: fixed; right: 14px; bottom: 18px; background: var(--text); color: #fff; padding: 10px 14px; border-radius: 12px; z-index: 100; box-shadow: var(--shadow); }
 .drawer-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4); z-index: 180; display: flex; justify-content: flex-end; }
 .drawer { width: min(420px, 100%); height: 100%; background: #fff; border-left: 1px solid var(--border); padding: 16px; overflow: auto; }
 .drawer-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px; }
 .drawer-actions { display: flex; gap: 6px; }
 .drawer-total { margin-top: 12px; font-weight: 700; }
+.consent-box { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.consent-row { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.consent-row input { margin-top: 3px; }
+.consent-row a { color: var(--primary); text-decoration: underline; }
+.consent-error { color: #b91c1c; margin-top: 8px; margin-bottom: 0; font-size: 14px; }
+.checkout-btn { margin-top: 10px; width: 100%; }
 @keyframes run-strip {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
