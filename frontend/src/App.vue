@@ -1,9 +1,15 @@
 <template>
-  <router-view />
+  <div>
+    <router-view />
+    <SiteFooter />
+  </div>
 </template>
 
 <script>
+import SiteFooter from './components/Footer.vue'
+
 export default {
-  name: "App"
+  name: 'App',
+  components: { SiteFooter }
 }
 </script>
