@@ -25,6 +25,8 @@
           <p class="muted">Найдено: {{ filteredProducts.length }} товаров</p>
         </div>
 
+        <button class="btn btnSecondary mobile-filters-toggle" type="button" @click="openMobileFilters">Фильтры</button>
+
         <div v-if="loadError" class="card error-card">
           <strong>Не удалось загрузить каталог</strong>
           <p class="muted">{{ loadError }}</p>
@@ -33,7 +35,7 @@
         <div v-if="!loading && !filteredProducts.length" class="card loading">По вашему запросу ничего не найдено.</div>
 
         <div class="catalog-layout">
-          <aside class="filters card">
+          <aside class="filters card desktop-filters">
             <h3>Фильтры</h3>
             <label>Категория<select v-model="selectedCategory" class="input"><option value="all">Все</option><option v-for="category in categories" :key="category" :value="category">{{ category }}</option></select></label>
             <label>Цена от<input v-model="minPrice" class="input" type="number" min="0" placeholder="0" /></label>
@@ -51,7 +53,27 @@
       </section>
 
       <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
+
+      <section v-if="orderSubmitted" class="card section order-success" aria-live="polite">
+        <h2>Заказ создан.</h2>
+        <p>В течение 1–2 часов с вами свяжется менеджер в Telegram для согласования доставки и оплаты.</p>
+        <a class="btn btnPrimary" :href="telegramContactUrl" target="_blank" rel="noopener noreferrer">Перейти в Telegram</a>
+      </section>
     </main>
+
+    <div v-if="filtersOpen" class="mobile-filters-overlay" @click="hideMobileFilters">
+      <aside class="filters card mobile-filters" @click.stop>
+        <h3>Фильтры</h3>
+        <label>Категория<select v-model="selectedCategory" class="input"><option value="all">Все</option><option v-for="category in categories" :key="category" :value="category">{{ category }}</option></select></label>
+        <label>Цена от<input v-model="minPrice" class="input" type="number" min="0" placeholder="0" /></label>
+        <label>Цена до<input v-model="maxPrice" class="input" type="number" min="0" placeholder="150000" /></label>
+        <label>Сортировка<select v-model="sortBy" class="input"><option value="popular">По популярности</option><option value="price-asc">Сначала дешевле</option><option value="price-desc">Сначала дороже</option></select></label>
+        <div class="mobile-filters-actions">
+          <button class="btn btnPrimary" type="button" @click="applyMobileFilters">Применить</button>
+          <button class="btn btnSecondary" type="button" @click="hideMobileFilters">Скрыть</button>
+        </div>
+      </aside>
+    </div>
 
     <div v-if="cartDrawerOpen" class="drawer-overlay" @click="closeOverlay('cart')">
       <aside class="drawer" @click.stop>
@@ -68,9 +90,16 @@
         </div>
         <p class="drawer-total">Итого: {{ formatPrice(cartPriceTotal) }} ₽</p>
         <div v-if="cart.length" class="consent-box">
+          <label>
+            Способ получения
+            <select v-model="deliveryMethod" class="input">
+              <option value="contact">Свяжитесь со мной для согласования доставки</option>
+              <option value="address">Доставка по адресу</option>
+            </select>
+          </label>
           <label class="consent-row">
             <input v-model="orderConsent" type="checkbox" />
-            <span>Я согласен с <router-link to="/privacy">Политикой конфиденциальности</router-link> и <router-link to="/offer">Офертой</router-link></span>
+            <span>Я согласен с <a href="#" @click.prevent="goToLegal('/privacy')">Политикой конфиденциальности</a> и <a href="#" @click.prevent="goToLegal('/offer')">Офертой</a></span>
           </label>
           <p v-if="consentError" class="consent-error">{{ consentError }}</p>
           <button class="btn btnPrimary checkout-btn" type="button" @click="sendOrder">Оформить заказ</button>
@@ -97,8 +126,9 @@ import Header from '../components/Header.vue'
 import ProductCard from '../components/ProductCard.vue'
 import LogoText from '../components/LogoText.vue'
 import { API_URL, apiFetch } from '../api'
+import { TELEGRAM_CONTACT_URL } from '../constants'
 import { UI_EVENTS } from '../constants'
-import { add, dec, inc, loadCart, remove, subscribe as subscribeCart, totalPrice } from '../store/cartStore'
+import { add, clear, dec, inc, loadCart, remove, subscribe as subscribeCart, totalPrice } from '../store/cartStore'
 import { loadFavorites, subscribe as subscribeFavorites, toggle } from '../store/favoritesStore'
 
 function normalizeText(input) {
@@ -132,7 +162,11 @@ export default {
       unsubscribeCart: null,
       unsubscribeFavorites: null,
       orderConsent: false,
-      consentError: ''
+      consentError: '',
+      filtersOpen: false,
+      deliveryMethod: 'contact',
+      orderSubmitted: false,
+      telegramContactUrl: TELEGRAM_CONTACT_URL
     }
   },
   computed: {
@@ -193,6 +227,15 @@ export default {
       const section = document.getElementById('catalog')
       if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' })
     },
+    openMobileFilters() {
+      this.filtersOpen = true
+    },
+    hideMobileFilters() {
+      this.filtersOpen = false
+    },
+    applyMobileFilters() {
+      this.filtersOpen = false
+    },
     addToCart(product) {
       this.cart = add(product)
       this.showToast('Добавлено в корзину')
@@ -206,8 +249,20 @@ export default {
         return
       }
       this.consentError = ''
-      this.showToast('Заказ принят в обработку. Мы свяжемся с вами для уточнения деталей.')
+      const orderDraft = {
+        createdAt: Date.now(),
+        items: this.cart,
+        total: this.cartPriceTotal,
+        deliveryMethod: this.deliveryMethod
+      }
+      localStorage.setItem('legoland_last_order', JSON.stringify(orderDraft))
+      this.cart = clear()
+      this.orderSubmitted = true
       this.closeOverlay('cart')
+    },
+    goToLegal(path) {
+      if (this.$route.path === path) return
+      this.$router.push(path)
     },
     onOpenCart() {
       this.updateOverlayQuery('cart', true)
@@ -324,9 +379,11 @@ export default {
 .strip-item img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
 .strip:hover .strip-track { animation-play-state: paused; }
 .section-head { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-bottom: 14px; }
+.mobile-filters-toggle { display: none; margin-bottom: 12px; }
 .catalog-layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
 .filters { padding: 16px; height: fit-content; position: sticky; top: 88px; }
 .filters label { display: block; margin-top: 10px; font-size: 14px; }
+.order-success { margin-top: 18px; display: grid; gap: 10px; }
 .catalog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .loading { padding: 18px; }
 .error-card { padding: 14px; margin-bottom: 12px; border-color: #fecaca; }
@@ -342,6 +399,7 @@ export default {
 .consent-row a { color: var(--primary); text-decoration: underline; }
 .consent-error { color: #b91c1c; margin-top: 8px; margin-bottom: 0; font-size: 14px; }
 .checkout-btn { margin-top: 10px; width: 100%; }
+.mobile-filters-overlay { display: none; }
 @keyframes run-strip {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -358,5 +416,12 @@ export default {
   .hero-shape { width: 110px; height: 72px; right: -34px; top: -16px; }
   .section-head { flex-direction: column; align-items: start; }
   .catalog-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .mobile-filters-toggle { display: inline-flex; }
+  .desktop-filters { display: none; }
+  .mobile-filters-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4); z-index: 200; display: flex; justify-content: center; align-items: flex-start; padding: 78px 12px 12px; }
+  .mobile-filters { width: min(520px, 100%); position: fixed; top: 78px; left: 12px; right: 12px; max-height: 80vh; overflow-y: auto; margin: 0 auto; }
+  .mobile-filters-actions { display: flex; gap: 8px; margin-top: 12px; }
 }
 </style>

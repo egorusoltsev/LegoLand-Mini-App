@@ -2,6 +2,10 @@
   <div class="container legal-page">
     <article class="card legal-card">
       <button class="btn btnSecondary" type="button" @click="goBack">Назад</button>
+      <div class="legal-nav">
+        <button class="btn btnSecondary" type="button" disabled>Политика конфиденциальности</button>
+        <button class="btn btnSecondary" type="button" @click="goOffer">Публичная оферта</button>
+      </div>
       <h1>Политика конфиденциальности</h1>
       <p class="muted">Настоящая политика описывает, какие данные мы обрабатываем в Mini App и для чего.</p>
 
@@ -43,6 +47,10 @@ export default {
   methods: {
     goBack() {
       this.$router.back()
+    },
+    goOffer() {
+      if (this.$route.path === '/offer') return
+      this.$router.replace('/offer')
     }
   }
 }
@@ -57,6 +65,12 @@ export default {
   max-width: 900px;
   margin: 0 auto;
   padding: clamp(16px, 3vw, 28px);
+}
+.legal-nav {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 h1 {
   margin-top: 14px;
