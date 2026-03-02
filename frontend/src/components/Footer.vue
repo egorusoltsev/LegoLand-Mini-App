@@ -3,8 +3,8 @@
     <div class="container footer-inner">
       <p class="muted">© {{ brandName }} Mini App</p>
       <nav class="footer-links" aria-label="Юридическая информация">
-        <router-link to="/privacy">Политика конфиденциальности</router-link>
-        <router-link to="/offer">Публичная оферта</router-link>
+        <a href="#" @click.prevent="openLegal('/privacy')">Политика конфиденциальности</a>
+        <a href="#" @click.prevent="openLegal('/offer')">Публичная оферта</a>
       </nav>
     </div>
   </footer>
@@ -18,6 +18,12 @@ export default {
   data() {
     return {
       brandName: BRAND_NAME
+    }
+  },
+  methods: {
+    openLegal(path) {
+      if (this.$route.path === path) return
+      this.$router.push(path)
     }
   }
 }

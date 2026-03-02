@@ -2,6 +2,10 @@
   <div class="container legal-page">
     <article class="card legal-card">
       <button class="btn btnSecondary" type="button" @click="goBack">Назад</button>
+      <div class="legal-nav">
+        <button class="btn btnSecondary" type="button" @click="goPrivacy">Политика конфиденциальности</button>
+        <button class="btn btnSecondary" type="button" disabled>Публичная оферта</button>
+      </div>
       <h1>Публичная оферта</h1>
       <p class="muted">Данный документ определяет порядок оформления и исполнения заказов через Mini App.</p>
 
@@ -16,6 +20,14 @@
 
       <h2>4. Доставка</h2>
       <p>Способы и сроки доставки уточняются при оформлении заказа и подтверждаются отдельно по каждому заказу.</p>
+
+      <h2>Доставка и получение</h2>
+      <ul>
+        <li>Доставка осуществляется по всей территории РФ.</li>
+        <li>Способ доставки согласовывается с покупателем после оформления заказа.</li>
+        <li>После оформления заказа менеджер связывается с покупателем в Telegram (@egor2815) в течение 1–2 часов.</li>
+        <li>Детали доставки, сроки и способ получения согласовываются индивидуально.</li>
+      </ul>
 
       <h2>5. Возврат</h2>
       <p>Возвраты и обращения по качеству рассматриваются индивидуально в рамках действующего законодательства и согласованных условий заказа.</p>
@@ -37,6 +49,10 @@ export default {
   methods: {
     goBack() {
       this.$router.back()
+    },
+    goPrivacy() {
+      if (this.$route.path === '/privacy') return
+      this.$router.replace('/privacy')
     }
   }
 }
@@ -52,6 +68,12 @@ export default {
   margin: 0 auto;
   padding: clamp(16px, 3vw, 28px);
 }
+.legal-nav {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 h1 {
   margin-top: 14px;
   margin-bottom: 10px;
@@ -59,6 +81,10 @@ h1 {
 h2 {
   margin-top: 18px;
   margin-bottom: 8px;
+}
+ul {
+  margin: 0;
+  padding-left: 20px;
 }
 a {
   color: var(--primary);
