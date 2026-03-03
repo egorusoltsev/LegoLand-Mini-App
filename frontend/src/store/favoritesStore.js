@@ -68,3 +68,9 @@ export function subscribe(listener) {
     window.removeEventListener('storage', onStorage)
   }
 }
+
+
+export function validateFavoritesShape(items) {
+  if (!Array.isArray(items)) return false
+  return items.every(function (item) { return item && item.id })
+}

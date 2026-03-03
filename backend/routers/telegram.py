@@ -1,14 +1,12 @@
-from fastapi import APIRouter, Request
-from db import SessionLocal
+from fastapi import APIRouter, Depends, Request
+from db import get_db
 from models import AuthSessionModel
 from utils.telegram import send_telegram_reply
 
 router = APIRouter()
 
 
-def attach_telegram_to_session(code: str, telegram_id: int) -> bool:
-    db = SessionLocal()
-
+def attach_telegram_to_session(code: str, telegram_id: int, db) -> bool:
     session = (
         db.query(AuthSessionModel)
         .filter(AuthSessionModel.code == code, AuthSessionModel.used == False)
@@ -16,17 +14,15 @@ def attach_telegram_to_session(code: str, telegram_id: int) -> bool:
     )
 
     if not session:
-        db.close()
         return False
 
     session.telegram_id = telegram_id
     db.commit()
-    db.close()
     return True
 
 
 @router.post("/telegram/webhook")
-async def telegram_webhook(request: Request):
+async def telegram_webhook(request: Request, db=Depends(get_db)):
     data = await request.json()
     print("[telegram.webhook] update received", {"keys": list(data.keys())})
 
@@ -40,7 +36,7 @@ async def telegram_webhook(request: Request):
 
     if text.startswith("/start web_"):
         code = text.replace("/start web_", "").strip()
-        success = attach_telegram_to_session(code, chat_id)
+        success = attach_telegram_to_session(code, chat_id, db)
 
         try:
             if success:

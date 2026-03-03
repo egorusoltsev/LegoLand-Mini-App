@@ -116,3 +116,11 @@ export function subscribe(listener) {
     window.removeEventListener('storage', onStorage)
   }
 }
+
+
+export function validateCartShape(items) {
+  if (!Array.isArray(items)) return false
+  return items.every(function (item) {
+    return item && item.id && Number(item.quantity) >= 0 && Number(item.price) >= 0
+  })
+}

@@ -1,16 +1,15 @@
 import os
 import uuid
-from fastapi import APIRouter, UploadFile, File, Header, HTTPException
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from supabase import create_client
+
+from auth.dependencies import check_admin_key
 
 router = APIRouter()
 
 
 @router.post("/admin/upload")
-async def upload_image(file: UploadFile = File(...), x_admin_key: str = Header(None)):
-    admin_key = os.getenv("ADMIN_KEY")
-    if x_admin_key != admin_key:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def upload_image(file: UploadFile = File(...), x_admin_key: str = Header(None), _=Depends(check_admin_key)):
 
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
@@ -27,10 +26,14 @@ async def upload_image(file: UploadFile = File(...), x_admin_key: str = Header(N
 
     filename = f"{uuid.uuid4().hex}{ext}"
 
-    supabase.storage.from_("product-images").upload(
+    response = supabase.storage.from_("product-images").upload(
         filename, content, {"content-type": file.content_type}
     )
+    if isinstance(response, dict) and response.get("error"):
+        raise HTTPException(status_code=502, detail="Storage upload failed")
 
     public_url = supabase.storage.from_("product-images").get_public_url(filename)
+    if not public_url:
+        raise HTTPException(status_code=502, detail="Could not get public image URL")
 
     return {"status": "ok", "filename": public_url}

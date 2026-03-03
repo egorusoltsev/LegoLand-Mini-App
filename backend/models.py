@@ -1,14 +1,16 @@
-from sqlalchemy import Column, Integer, String, BigInteger, Boolean, ForeignKey
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from db import Base
 
 
 class OrderModel(Base):
     __tablename__ = "orders"
 
-    id = Column(BigInteger, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)
     name = Column(String)
     phone = Column(String)
+    address = Column(String, nullable=True)
     status = Column(String)
     total = Column(Integer)
     created_at = Column(BigInteger)
@@ -23,6 +25,11 @@ class ProductModel(Base):
     title = Column(String)
     price = Column(Integer)
     image = Column(String)
+    sku = Column(String, nullable=True)
+    pieces = Column(Integer, nullable=True)
+    series = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    category = Column(String, nullable=True)
 
 
 class UserModel(Base):
@@ -54,12 +61,18 @@ class AuthSessionModel(Base):
     created_at = Column(BigInteger)
     used = Column(Boolean, default=False)
 
+    __table_args__ = (
+        Index("ix_auth_sessions_created_at", "created_at"),
+        Index("ix_auth_sessions_telegram_id", "telegram_id"),
+    )
+
 
 class OrderItemModel(Base):
     __tablename__ = "order_items"
 
     id = Column(Integer, primary_key=True)
-    order_id = Column(BigInteger, ForeignKey("orders.id"))
+    order_id = Column(String, ForeignKey("orders.id"))
     product_id = Column(Integer)
+    title = Column(String)
     quantity = Column(Integer)
     price = Column(Integer)

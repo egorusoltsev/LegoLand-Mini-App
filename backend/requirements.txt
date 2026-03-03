@@ -7,3 +7,4 @@ sqlalchemy
 psycopg2-binary
 supabase
 PyJWT==2.9.0
+alembic

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from db import Base, engine
+from config import validate_required_env
 
 from routers.products import router as products_router
 from routers.orders import router as orders_router
@@ -13,6 +14,8 @@ from routers.auth import router as auth_router
 from routers.telegram import router as telegram_router
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
+
+validate_required_env()
 
 app = FastAPI()
 
@@ -34,8 +37,6 @@ app.add_middleware(
 if not os.path.exists("images"):
     os.makedirs("images")
 app.mount("/images", StaticFiles(directory="images"), name="images")
-
-Base.metadata.create_all(bind=engine)
 
 app.include_router(products_router)
 app.include_router(orders_router)
