@@ -1,5 +1,14 @@
 export const BRAND_NAME = 'LegoLand'
-export const TELEGRAM_CONTACT_URL = 'https://t.me/egor2815'
+
+function resolveTelegramUrl() {
+  const configured = import.meta.env.VITE_TELEGRAM_CONTACT_URL
+  if (typeof configured === 'string' && configured.trim()) {
+    return configured.trim()
+  }
+  return 'https://t.me/your_support'
+}
+
+export const TELEGRAM_CONTACT_URL = resolveTelegramUrl()
 
 export const UI_EVENTS = {
   OPEN_CART: 'legoland:open-cart',

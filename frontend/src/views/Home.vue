@@ -110,6 +110,18 @@
               <option value="address">Доставка по адресу</option>
             </select>
           </label>
+          <label>
+            Имя
+            <input v-model="customerName" class="input" type="text" autocomplete="name" />
+          </label>
+          <label>
+            Телефон
+            <input v-model="customerPhone" class="input" type="tel" autocomplete="tel" />
+          </label>
+          <label v-if="deliveryMethod === 'address'">
+            Адрес
+            <input v-model="customerAddress" class="input" type="text" autocomplete="street-address" />
+          </label>
           <label class="consent-row">
             <input v-model="orderConsent" type="checkbox" />
             <span>Я согласен с <a href="#" @click.prevent="goToLegal('/privacy')">Политикой конфиденциальности</a> и <a href="#" @click.prevent="goToLegal('/offer')">Офертой</a></span>
@@ -183,6 +195,9 @@ export default {
       activeProductId: null,
       deliveryMethod: 'contact',
       orderSubmitted: false,
+      customerName: '',
+      customerPhone: '',
+      customerAddress: '',
       telegramContactUrl: TELEGRAM_CONTACT_URL,
       hasDrawerHistoryState: false,
       isProgrammaticDrawerBack: false
@@ -266,22 +281,60 @@ export default {
     increaseQuantity(product) { this.cart = inc(product.id) },
     decreaseQuantity(product) { this.cart = dec(product.id) },
     removeFromCart(product) { this.cart = remove(product.id) },
-    sendOrder() {
+    async sendOrder() {
       if (!this.orderConsent) {
         this.consentError = 'Подтвердите согласие с Политикой конфиденциальности и Офертой.'
         return
       }
-      this.consentError = ''
-      const orderDraft = {
-        createdAt: Date.now(),
-        items: this.cart,
-        total: this.cartPriceTotal,
-        deliveryMethod: this.deliveryMethod
+      if (!this.customerName.trim() || !this.customerPhone.trim()) {
+        this.consentError = 'Укажите имя и телефон для оформления заказа.'
+        return
       }
-      localStorage.setItem('legoland_last_order', JSON.stringify(orderDraft))
-      this.cart = clear()
-      this.orderSubmitted = true
-      this.closeOverlay('cart')
+      if (!this.cart.length) {
+        this.consentError = 'Корзина пуста.'
+        return
+      }
+      this.consentError = ''
+
+      const payload = {
+        name: this.customerName.trim(),
+        phone: this.customerPhone.trim(),
+        address: this.deliveryMethod === 'address' ? this.customerAddress.trim() : '',
+        delivery_method: this.deliveryMethod,
+        items: this.cart.map(function (item) {
+          return {
+            id: item.id,
+            title: item.title,
+            quantity: item.quantity,
+            price: item.price
+          }
+        })
+      }
+
+      try {
+        const res = await apiFetch('/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+
+        if (!res.ok) {
+          const errorText = await res.text()
+          this.consentError = 'Ошибка оформления заказа. Код: ' + res.status
+          console.error('order submit failed', errorText)
+          return
+        }
+
+        const data = await res.json()
+        localStorage.setItem('legoland_last_order_id', String(data.order_id || ''))
+        this.cart = clear()
+        this.orderSubmitted = true
+        this.closeOverlay('cart')
+        this.$router.push('/account')
+      } catch (error) {
+        this.consentError = 'Сетевая ошибка при оформлении заказа.'
+        console.error(error)
+      }
     },
     goToLegal(path) {
       if (this.$route.path === path) return

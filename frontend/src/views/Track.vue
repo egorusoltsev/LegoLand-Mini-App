@@ -65,11 +65,6 @@ export default {
         this.error = 'Введите номер заказа'
         return
       }
-      if (isNaN(Number(raw))) {
-        this.error = 'Некорректный номер заказа'
-        return
-      }
-
       this.loading = true
       this.error = ''
       this.order = null
