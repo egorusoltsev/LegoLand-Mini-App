@@ -25,10 +25,16 @@ raw_origins = os.getenv(
 )
 allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
+# Telegram Mini App and preview domains should pass CORS preflight as well.
+allowed_origin_regex = os.getenv(
+    "CORS_ORIGIN_REGEX",
+    r"https://([a-zA-Z0-9-]+\.)*(telegram\.org|t\.me|vercel\.app)$",
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.t\.me|https://.*\.telegram\.org",
+    allow_origin_regex=allowed_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
