@@ -84,6 +84,7 @@
 </template>
 
 <script>
+import { buildApiUrl } from '../api'
 export default {
   name: 'Admin',
 
@@ -190,8 +191,7 @@ export default {
 
     async fetchOrders() {
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const res = await fetch(`${API_URL}/orders`, {
+        const res = await fetch(buildApiUrl('/orders'), {
           headers: {
             'X-Admin-Key': this.adminKey
           }
@@ -223,8 +223,7 @@ export default {
 
     async setStatus(orderId, newStatus) {
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const patchRes = await fetch(`${API_URL}/orders/${orderId}/status`, {
+        const patchRes = await fetch(buildApiUrl(`/orders/${orderId}/status`), {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -248,8 +247,7 @@ export default {
 
     async loadProducts() {
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const res = await fetch(`${API_URL}/products`)
+        const res = await fetch(buildApiUrl('/products'))
         this.products = await res.json()
       } catch (e) {
         console.error('Ошибка загрузки товаров', e)
@@ -265,11 +263,10 @@ export default {
       if (!this.selectedFile) return alert('Выбери файл')
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
         const formData = new FormData()
         formData.append('file', this.selectedFile)
 
-        const res = await fetch(`${API_URL}/admin/upload`, {
+        const res = await fetch(buildApiUrl('/admin/upload'), {
           method: 'POST',
           headers: {
             'X-Admin-Key': this.adminKey
@@ -297,8 +294,7 @@ export default {
       if (!this.newImage.trim()) return alert('Сначала загрузите фото (upload)')
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const res = await fetch(`${API_URL}/admin/products`, {
+        const res = await fetch(buildApiUrl('/admin/products'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -332,8 +328,7 @@ export default {
       if (!confirm('Удалить товар?')) return
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-        const res = await fetch(`${API_URL}/admin/products/${id}`, {
+        const res = await fetch(buildApiUrl(`/admin/products/${id}`), {
           method: 'DELETE',
           headers: {
             'X-Admin-Key': this.adminKey

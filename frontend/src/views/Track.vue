@@ -31,6 +31,7 @@
 
 <script>
 import { getToken } from '../authToken'
+import { buildApiUrl } from '../api'
 
 export default {
   name: 'Track',
@@ -69,8 +70,7 @@ export default {
       this.error = ''
       this.order = null
 
-      const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-      const url = API_URL + '/public/orders/' + encodeURIComponent(raw)
+      const url = buildApiUrl('/public/orders/' + encodeURIComponent(raw))
 
       const controller = new AbortController()
       const timeout = setTimeout(function () { controller.abort() }, 8000)
