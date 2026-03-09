@@ -3,7 +3,7 @@ import { getToken, clearToken } from './authToken'
 function resolveApiUrl() {
   const rawUrl = import.meta.env.VITE_API_URL
   if (typeof rawUrl === 'string' && rawUrl.trim()) {
-    return rawUrl.replace(/\/$/, '')
+    return rawUrl.trim().replace(/\/+$/, '')
   }
 
   if (typeof window !== 'undefined' && window.location && window.location.origin) {
@@ -15,10 +15,23 @@ function resolveApiUrl() {
 
 export const API_URL = resolveApiUrl()
 
+export function buildApiUrl(path) {
+  const endpoint = path.charAt(0) === '/' ? path : '/' + path
+  return API_URL + endpoint
+}
+
+if (import.meta.env.DEV) {
+  console.info('[api] resolved API_URL:', API_URL || '(empty, fallback to current origin)')
+}
+
+if (!API_URL) {
+  console.error('[api] VITE_API_URL is empty. Frontend requests will use relative URLs and may fail in production.')
+}
+
 export async function apiFetch(path, options = {}) {
   const token = getToken()
   const endpoint = path.charAt(0) === '/' ? path : '/' + path
-  const url = API_URL + endpoint
+  const url = buildApiUrl(path)
 
   const headers = {
     ...(options.headers || {})
