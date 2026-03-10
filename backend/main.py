@@ -25,6 +25,17 @@ raw_origins = os.getenv(
 )
 allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
+# Keep critical web origins enabled even if CORS_ORIGINS env is overridden incompletely.
+required_origins = {
+    "https://legolandstore.ru",
+    "https://www.legolandstore.ru",
+    "http://localhost:5173",
+}
+
+for origin in required_origins:
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
+
 # Telegram Mini App and preview domains should pass CORS preflight as well.
 allowed_origin_regex = os.getenv(
     "CORS_ORIGIN_REGEX",
